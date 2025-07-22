@@ -1,0 +1,11 @@
+[package]
+name = "new_mangadownloader"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+axum = "0.7"
+tokio = { version = "1", features = ["full", "rt-multi-thread"] }
+reqwest = { version = "0.12", features = ["json"] }
+tower-http = { version = "0.6", features = ["cors"] }
+#hyper = { version = "0.14", features = ["full"] }
