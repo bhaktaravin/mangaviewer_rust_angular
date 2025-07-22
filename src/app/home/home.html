@@ -1,11 +1,20 @@
 <h1>Manga Viewer and Downloader</h1>
 
+<!-- -->
+
 <div class="card-grid">
   @for (manga of mangaList; track manga.id) {
-    <div class="manga-card">
+    @if (getCoverId(manga)) {
+      <div class="manga-card">
         <p>{{ manga.id }}</p>
-        <!-- Use Functions to Get Cover Id and Cover Image-->
-        <img [src]="'https://uploads.mangadex.org/covers/' + manga.id + '/' + getCoverId(manga) + '.jpg'" alt="{{ manga.attributes.title['en'] }}" />
-    </div>
+        <img 
+          [src]="'https://uploads.mangadex.org/covers/' + manga.id + '/' + getCoverId(manga) + '.jpg'" 
+          alt="{{ manga.attributes.title['en'] }}" 
+        />
+        
+      </div>
+    }
   }
+</div>
+
 

@@ -19,7 +19,7 @@ export class Apiservice {
   }
 
   getCoverArt(coverId: string) {
-    return this.http.get<any>(`https://api.mangadex.org/cover/${coverId}`);
+    return this.http.get<any>(`https://uploads.mangadex.org/cover/${coverId}`);
   }
   
 

@@ -13,6 +13,7 @@ export class Home {
   mangaList: any[] = [];
   coverId: any;
   coverFileName: string = '';
+  res: any;
 
   constructor(private apiService: Apiservice) { }
 
@@ -36,7 +37,6 @@ export class Home {
       this.coverId = this.getCoverId(this.mangaList[0]);
       console.log('Cover Image:', this.coverId);
 
-      console.log('Cover File Name:', this.getCoverFileName(this.coverId));
       
     }, error => {
       console.error('Error fetching manga list:', error);
@@ -51,25 +51,12 @@ export class Home {
   return manga.attributes.description['en']?.slice(0, 150) || '[No description]';
 }
 
-getCoverId(manga: Manga): any {
-  const coverId = manga.relationships.find(rel => rel.type === 'cover_art')?.id;
-  return coverId;
+getCoverId(manga: any): string | null {
+  const cover = manga.relationships.find((rel: any) => rel.type === 'cover_art');
+  return cover?.id ?? null;
 }
 
-getCoverFileName(coverId: string) {
-  const coverFileName = this.apiService.getCoverArt(coverId).subscribe(response => {
-    console.log('Cover File Name:', response);
-    // Assuming the response contains the cover file name
-    console.log('FileName: ', response.data.attributes['fileName'])
-    response = response.data.attributes['fileName'];
 
-    return response;
-  }, error => {
-    console.error('Error fetching cover file name:', error);
-    return null;
-  });
-  return coverFileName;
-}
 
 }
 
