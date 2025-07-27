@@ -1,13 +1,12 @@
 // src/api.rs
 
-use reqwest::{Client, Error};
+use reqwest::Client;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use urlencoding;
 
-// --- MangaDex API Response Structs ---
+// --- API Response Structs ---
 
-// THIS IS THE DEFINITION OF MangaDexResponse
 #[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct MangaDexResponse {
     pub data: Vec<MangaData>,
@@ -16,17 +15,25 @@ pub struct MangaDexResponse {
     pub total: u32,
 }
 
-// THIS IS THE DEFINITION OF MangaData
+#[derive(Debug, Deserialize, Serialize, Clone)]
+pub struct FilteredMangaResponse {
+    pub english_manga: Vec<MangaData>,
+    pub non_english_manga: Vec<MangaData>,
+    pub english_count: u32,
+    pub non_english_count: u32,
+    pub total: u32,
+    pub has_english_content: bool,
+    pub message: Option<String>,
+}
+
 #[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct MangaData {
     pub id: String,
     #[serde(rename = "type")]
     pub item_type: String,
     pub attributes: MangaAttributes,
-    // pub relationships: Vec<serde_json::Value>, // Using Value for simplicity if not detailing further
 }
 
-// THIS IS THE DEFINITION OF MangaAttributes
 #[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct MangaAttributes {
     pub title: HashMap<String, String>,
@@ -48,10 +55,8 @@ pub struct MangaAttributes {
     pub version: u32,
     #[serde(rename = "latestUploadedChapter")]
     pub latest_uploaded_chapter: Option<String>,
-    // Add other fields you might need, like tags, links, etc.
 }
 
-// THESE ARE THE DEFINITIONS FOR MangaDexApiErrorResponse AND MangaDexApiErrorDetail
 #[derive(Debug, Deserialize, Serialize)]
 pub struct MangaDexApiErrorResponse {
     pub errors: Vec<MangaDexApiErrorDetail>,
@@ -66,7 +71,6 @@ pub struct MangaDexApiErrorDetail {
 }
 
 // --- Custom Error for MangaDexClient ---
-// THIS IS THE DEFINITION FOR MangaDexClientError
 #[derive(thiserror::Error, Debug)]
 pub enum MangaDexClientError {
     #[error("MangaDex API returned an error: {:?}", _0)]
@@ -80,7 +84,6 @@ pub enum MangaDexClientError {
 }
 
 // --- MangaDexClient ---
-// THIS IS THE DEFINITION FOR MangaDexClient struct and its impl block
 pub struct MangaDexClient {
     client: Client,
     base_url: String,
@@ -88,12 +91,10 @@ pub struct MangaDexClient {
 
 impl MangaDexClient {
     pub fn new() -> Self {
-            let client = Client::builder()
-                .user_agent("MangaDexAxumProxy/1.0 (https://github.com/bhaktaravin/mangaviewer_rust_angular") // <-- Add this line
-            // Or, for a more generic one, though custom is better:
-            // .user_agent(concat!(env!("CARGO_PKG_NAME"), "/", env!("CARGO_PKG_VERSION"))) // Reads from Cargo.toml
-                .build()
-                .expect("Failed to build reqwest client"); // build() can fail, so handle it
+        let client = Client::builder()
+            .user_agent("MangaDexAxumProxy/1.0 (https://github.com/bhaktaravin/mangaviewer_rust_angular)")
+            .build()
+            .expect("Failed to build reqwest client");
 
         MangaDexClient {
             client,
@@ -142,33 +143,213 @@ impl MangaDexClient {
         limit: Option<u32>,
         offset: Option<u32>,
     ) -> Result<MangaDexResponse, MangaDexClientError> {
-        let mut url = format!("{}/manga?title={}", self.base_url, urlencoding::encode(title));
+        let encoded_title = urlencoding::encode(title);
+        let mut url = format!("{}/manga?title={}", self.base_url, encoded_title);
 
-        if let Some(l) = limit {
-            url.push_str(&format!("&limit={}", l));
+        if let Some(limit) = limit {
+            url.push_str(&format!("&limit={}", limit));
         }
-        if let Some(o) = offset {
-            url.push_str(&format!("&offset={}", o));
+        if let Some(offset) = offset {
+            url.push_str(&format!("&offset={}", offset));
         }
 
-        tracing::info!("Searching manga from: {}", url);
+        tracing::info!("Searching manga with URL: {}", url);
 
-        let response = self.client.get(&url).send().await?;
-        let status = response.status();
-        let body_text = response.text().await.map_err(MangaDexClientError::Reqwest)?;
+        let res = self
+            .client
+            .get(&url)
+            .send()
+            .await
+            .map_err(MangaDexClientError::from)?;
 
-        if !status.is_success() {
-            if let Ok(api_error_response) = serde_json::from_str::<MangaDexApiErrorResponse>(&body_text) {
-                return Err(MangaDexClientError::ApiError(api_error_response.errors));
+        if res.status().is_success() {
+            let body = res.json::<MangaDexResponse>().await?;
+            Ok(body)
+        } else {
+            let err = res.json::<MangaDexApiErrorResponse>().await?;
+            Err(MangaDexClientError::ApiError(err.errors))
+        }
+    }
+
+    pub async fn search_manga_english_filtered(
+        &self,
+        title: &str,
+        limit: Option<u32>,
+        offset: Option<u32>,
+        include_non_english: bool,
+    ) -> Result<FilteredMangaResponse, MangaDexClientError> {
+        // First get all results
+        let response = self.search_manga(title, limit, offset).await?;
+        
+        // Filter manga based on English content availability
+        let (english_manga, non_english_manga) = Self::filter_manga_by_language(&response.data);
+        
+        let english_count = english_manga.len() as u32;
+        let non_english_count = non_english_manga.len() as u32;
+        let has_english_content = english_count > 0;
+        
+        // Generate appropriate message
+        let message = if !has_english_content && non_english_count > 0 {
+            Some(format!(
+                "No English manga found for '{}'. Found {} manga in other languages. Would you like to see them?", 
+                title, non_english_count
+            ))
+        } else if has_english_content && non_english_count > 0 && !include_non_english {
+            Some(format!(
+                "Showing {} English manga. {} additional manga available in other languages.", 
+                english_count, non_english_count
+            ))
+        } else {
+            None
+        };
+
+        Ok(FilteredMangaResponse {
+            english_manga: english_manga.clone(),
+            non_english_manga: if include_non_english { non_english_manga } else { Vec::new() },
+            english_count,
+            non_english_count,
+            total: response.total,
+            has_english_content,
+            message,
+        })
+    }
+
+    fn filter_manga_by_language(manga_list: &[MangaData]) -> (Vec<MangaData>, Vec<MangaData>) {
+        let mut english_manga = Vec::new();
+        let mut non_english_manga = Vec::new();
+
+        for manga in manga_list {
+            if Self::has_english_content(manga) {
+                english_manga.push(manga.clone());
             } else {
-                return Err(MangaDexClientError::RequestFailed(format!(
-                    "Non-success status: {} - Body: {}",
-                    status, body_text
-                )));
+                non_english_manga.push(manga.clone());
             }
         }
 
-        serde_json::from_str(&body_text)
-            .map_err(|e| MangaDexClientError::RequestFailed(format!("Failed to parse success JSON: {}", e)))
+        (english_manga, non_english_manga)
+    }
+
+    fn has_english_content(manga: &MangaData) -> bool {
+        // Check if manga has English title
+        if manga.attributes.title.contains_key("en") {
+            return true;
+        }
+        
+        // Check if manga has English description
+        if manga.attributes.description.contains_key("en") {
+            return true;
+        }
+        
+        // Check if original language is English
+        if let Some(ref lang) = manga.attributes.original_language {
+            if lang == "en" {
+                return true;
+            }
+        }
+        
+        false
+    }
+}
+
+pub async fn root_handler() -> Result<String, MangaDexClientError> {
+    println!("Welcome to the MangaDx API Proxy!");
+    println!("Try /api/manga/ or /api/manga?title=...");
+
+    let client = Client::builder()
+        .user_agent("MangaDxAxumProxy/1.0")
+        .build()
+        .expect("Failed to build client");
+
+    let url = "https://api.mangadex.org/manga";
+
+    let res = client.get(url).send().await.map_err(MangaDexClientError::Reqwest)?;
+    let status = res.status();
+    if status.is_success() {
+        let body = res.text().await.map_err(MangaDexClientError::Reqwest)?;
+        tracing::info!("Response from MangaDx: {}", body);
+        Ok(body)
+    } else {
+        Err(MangaDexClientError::RequestFailed(format!(
+            "Failed to fetch root handler: {}",
+            status
+        )))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::collections::HashMap;
+
+    fn create_test_manga(title_en: Option<&str>, desc_en: Option<&str>, orig_lang: Option<&str>) -> MangaData {
+        let mut title = HashMap::new();
+        let mut description = HashMap::new();
+        
+        if let Some(en_title) = title_en {
+            title.insert("en".to_string(), en_title.to_string());
+        }
+        title.insert("ja".to_string(), "日本語タイトル".to_string());
+        
+        if let Some(en_desc) = desc_en {
+            description.insert("en".to_string(), en_desc.to_string());
+        }
+        description.insert("ja".to_string(), "日本語説明".to_string());
+
+        MangaData {
+            id: "test".to_string(),
+            item_type: "manga".to_string(),
+            attributes: MangaAttributes {
+                title,
+                description,
+                status: "ongoing".to_string(),
+                last_volume: None,
+                last_chapter: None,
+                original_language: orig_lang.map(|s| s.to_string()),
+                year: Some(2023),
+                content_rating: Some("safe".to_string()),
+                created_at: "2023-01-01T00:00:00Z".to_string(),
+                updated_at: "2023-01-01T00:00:00Z".to_string(),
+                version: 1,
+                latest_uploaded_chapter: None,
+            },
+        }
+    }
+
+    #[test]
+    fn test_has_english_title() {
+        let manga = create_test_manga(Some("Naruto"), None, None);
+        assert!(MangaDexClient::has_english_content(&manga));
+    }
+
+    #[test]
+    fn test_has_english_description() {
+        let manga = create_test_manga(None, Some("English description"), None);
+        assert!(MangaDexClient::has_english_content(&manga));
+    }
+
+    #[test]
+    fn test_has_english_original_language() {
+        let manga = create_test_manga(None, None, Some("en"));
+        assert!(MangaDexClient::has_english_content(&manga));
+    }
+
+    #[test]
+    fn test_no_english_content() {
+        let manga = create_test_manga(None, None, Some("ja"));
+        assert!(!MangaDexClient::has_english_content(&manga));
+    }
+
+    #[test]
+    fn test_filter_manga_by_language() {
+        let manga_list = vec![
+            create_test_manga(Some("Naruto"), None, None),          // English
+            create_test_manga(None, None, Some("ko")),              // Korean
+            create_test_manga(None, Some("English desc"), None),    // English
+        ];
+
+        let (english, non_english) = MangaDexClient::filter_manga_by_language(&manga_list);
+        
+        assert_eq!(english.len(), 2);
+        assert_eq!(non_english.len(), 1);
     }
 }

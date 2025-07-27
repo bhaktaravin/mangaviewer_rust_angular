@@ -1,1 +1,38 @@
+# Rust build artifacts
 /target
+Cargo.lock
+
+# Environment files
+.env
+.env.local
+.env.production
+
+# API keys and secrets
+.openai_key.example
+*.key
+*.pem
+
+# IDE and editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
+*.tmp
+
+# Logs
+*.log
+logs/
+
+# Deployment artifacts
+fly.toml.backup
+
+# Test outputs
+test_output/
+*.test
+
+*.sh

@@ -1,0 +1,44 @@
+.git/
+.github/
+.vscode/
+.env.local
+.openai_key.example
+
+# Target directory (Rust build artifacts)
+target/
+
+# Test files
+test_*.rs
+*_test.sh
+interactive_test.sh
+manual_test.sh
+test_ai.sh
+test_deployment.sh
+test_info.sh
+
+# Demo and development files
+demo_server.rs
+mock_data.rs
+
+# Documentation
+AI_FEATURES.md
+DEPLOY_GUIDE.sh
+
+# Scripts
+deploy.sh
+
+# IDE files
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Miscellaneous
+*.tmp
+*.sh
