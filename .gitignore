@@ -39,5 +39,3 @@ manual_test.sh
 test_*.sh
 interactive_test.sh
 deploy.sh
-
-/target
