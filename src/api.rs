@@ -1,22 +1,10 @@
-// src/api.rs
-
-<<<<<<< HEAD
 use reqwest::Client;
-=======
-use reqwest::{Client, Error};
->>>>>>> 503d67f74a48590acb0faed7784918fdab662117
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use urlencoding;
 
-<<<<<<< HEAD
 // --- API Response Structs ---
 
-=======
-// --- MangaDex API Response Structs ---
-
-// THIS IS THE DEFINITION OF MangaDexResponse
->>>>>>> 503d67f74a48590acb0faed7784918fdab662117
 #[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct MangaDexResponse {
     pub data: Vec<MangaData>,
@@ -25,7 +13,6 @@ pub struct MangaDexResponse {
     pub total: u32,
 }
 
-<<<<<<< HEAD
 #[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct FilteredMangaResponse {
     pub english_manga: Vec<MangaData>,
@@ -37,24 +24,14 @@ pub struct FilteredMangaResponse {
     pub message: Option<String>,
 }
 
-=======
-// THIS IS THE DEFINITION OF MangaData
->>>>>>> 503d67f74a48590acb0faed7784918fdab662117
 #[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct MangaData {
     pub id: String,
     #[serde(rename = "type")]
     pub item_type: String,
     pub attributes: MangaAttributes,
-<<<<<<< HEAD
 }
 
-=======
-    // pub relationships: Vec<serde_json::Value>, // Using Value for simplicity if not detailing further
-}
-
-// THIS IS THE DEFINITION OF MangaAttributes
->>>>>>> 503d67f74a48590acb0faed7784918fdab662117
 #[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct MangaAttributes {
     pub title: HashMap<String, String>,
@@ -76,15 +53,8 @@ pub struct MangaAttributes {
     pub version: u32,
     #[serde(rename = "latestUploadedChapter")]
     pub latest_uploaded_chapter: Option<String>,
-<<<<<<< HEAD
 }
 
-=======
-    // Add other fields you might need, like tags, links, etc.
-}
-
-// THESE ARE THE DEFINITIONS FOR MangaDexApiErrorResponse AND MangaDexApiErrorDetail
->>>>>>> 503d67f74a48590acb0faed7784918fdab662117
 #[derive(Debug, Deserialize, Serialize)]
 pub struct MangaDexApiErrorResponse {
     pub errors: Vec<MangaDexApiErrorDetail>,
@@ -99,10 +69,6 @@ pub struct MangaDexApiErrorDetail {
 }
 
 // --- Custom Error for MangaDexClient ---
-<<<<<<< HEAD
-=======
-// THIS IS THE DEFINITION FOR MangaDexClientError
->>>>>>> 503d67f74a48590acb0faed7784918fdab662117
 #[derive(thiserror::Error, Debug)]
 pub enum MangaDexClientError {
     #[error("MangaDex API returned an error: {:?}", _0)]
@@ -111,15 +77,11 @@ pub enum MangaDexClientError {
     NotFound(String),
     #[error("Request to MangaDex API failed: {0}")]
     Reqwest(#[from] reqwest::Error),
-    #[error("Unexpected response from MangaDex API: {0}")]
+    #[error("Unexpected response from MangaDx API: {0}")]
     RequestFailed(String),
 }
 
 // --- MangaDexClient ---
-<<<<<<< HEAD
-=======
-// THIS IS THE DEFINITION FOR MangaDexClient struct and its impl block
->>>>>>> 503d67f74a48590acb0faed7784918fdab662117
 pub struct MangaDexClient {
     client: Client,
     base_url: String,
@@ -127,23 +89,14 @@ pub struct MangaDexClient {
 
 impl MangaDexClient {
     pub fn new() -> Self {
-<<<<<<< HEAD
         let client = Client::builder()
             .user_agent("MangaDexAxumProxy/1.0 (https://github.com/bhaktaravin/mangaviewer_rust_angular)")
             .build()
             .expect("Failed to build reqwest client");
-=======
-            let client = Client::builder()
-                .user_agent("MangaDexAxumProxy/1.0 (https://github.com/bhaktaravin/mangaviewer_rust_angular") // <-- Add this line
-            // Or, for a more generic one, though custom is better:
-            // .user_agent(concat!(env!("CARGO_PKG_NAME"), "/", env!("CARGO_PKG_VERSION"))) // Reads from Cargo.toml
-                .build()
-                .expect("Failed to build reqwest client"); // build() can fail, so handle it
->>>>>>> 503d67f74a48590acb0faed7784918fdab662117
 
         MangaDexClient {
             client,
-            base_url: "https://api.mangadex.org".to_string(),
+            base_url: "https://api.mangadex.org".to_string(), // Fixed: was "mangadx"
         }
     }
 
@@ -188,33 +141,34 @@ impl MangaDexClient {
         limit: Option<u32>,
         offset: Option<u32>,
     ) -> Result<MangaDexResponse, MangaDexClientError> {
-<<<<<<< HEAD
-        let encoded_title = urlencoding::encode(title);
-        let mut url = format!("{}/manga?title={}", self.base_url, encoded_title);
+        let mut url = format!("{}/manga?title={}", self.base_url, urlencoding::encode(title));
 
-        if let Some(limit) = limit {
-            url.push_str(&format!("&limit={}", limit));
+        if let Some(l) = limit {
+            url.push_str(&format!("&limit={}", l));
         }
-        if let Some(offset) = offset {
-            url.push_str(&format!("&offset={}", offset));
+        if let Some(o) = offset {
+            url.push_str(&format!("&offset={}", o));
         }
 
-        tracing::info!("Searching manga with URL: {}", url);
+        tracing::info!("Searching manga from: {}", url);
 
-        let res = self
-            .client
-            .get(&url)
-            .send()
-            .await
-            .map_err(MangaDexClientError::from)?;
+        let response = self.client.get(&url).send().await?;
+        let status = response.status();
+        let body_text = response.text().await.map_err(MangaDexClientError::Reqwest)?;
 
-        if res.status().is_success() {
-            let body = res.json::<MangaDexResponse>().await?;
-            Ok(body)
-        } else {
-            let err = res.json::<MangaDexApiErrorResponse>().await?;
-            Err(MangaDexClientError::ApiError(err.errors))
+        if !status.is_success() {
+            if let Ok(api_error_response) = serde_json::from_str::<MangaDexApiErrorResponse>(&body_text) {
+                return Err(MangaDexClientError::ApiError(api_error_response.errors));
+            } else {
+                return Err(MangaDexClientError::RequestFailed(format!(
+                    "Non-success status: {} - Body: {}",
+                    status, body_text
+                )));
+            }
         }
+
+        serde_json::from_str(&body_text)
+            .map_err(|e| MangaDexClientError::RequestFailed(format!("Failed to parse success JSON: {}", e)))
     }
 
     pub async fn search_manga_english_filtered(
@@ -399,35 +353,3 @@ mod tests {
         assert_eq!(non_english.len(), 1);
     }
 }
-=======
-        let mut url = format!("{}/manga?title={}", self.base_url, urlencoding::encode(title));
-
-        if let Some(l) = limit {
-            url.push_str(&format!("&limit={}", l));
-        }
-        if let Some(o) = offset {
-            url.push_str(&format!("&offset={}", o));
-        }
-
-        tracing::info!("Searching manga from: {}", url);
-
-        let response = self.client.get(&url).send().await?;
-        let status = response.status();
-        let body_text = response.text().await.map_err(MangaDexClientError::Reqwest)?;
-
-        if !status.is_success() {
-            if let Ok(api_error_response) = serde_json::from_str::<MangaDexApiErrorResponse>(&body_text) {
-                return Err(MangaDexClientError::ApiError(api_error_response.errors));
-            } else {
-                return Err(MangaDexClientError::RequestFailed(format!(
-                    "Non-success status: {} - Body: {}",
-                    status, body_text
-                )));
-            }
-        }
-
-        serde_json::from_str(&body_text)
-            .map_err(|e| MangaDexClientError::RequestFailed(format!("Failed to parse success JSON: {}", e)))
-    }
-}
->>>>>>> 503d67f74a48590acb0faed7784918fdab662117

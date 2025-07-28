@@ -1,15 +1,12 @@
 [package]
 name = "api"
 version = "0.1.0"
-<<<<<<< HEAD
 edition = "2021"
 
 [[bin]]
 name = "main"
 path = "src/main.rs"
-=======
 edition = "2024"
->>>>>>> 503d67f74a48590acb0faed7784918fdab662117
 
 [dependencies]
 # Web framework
@@ -31,11 +28,8 @@ anyhow = "1.0" # Good for general purpose error handling in main/top-level
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] } # For logging output
 urlencoding = "2.1.3"
-<<<<<<< HEAD
 mongodb = "3.2.4"
 dotenv = "0.15.0"
-=======
->>>>>>> 503d67f74a48590acb0faed7784918fdab662117
 
 # Optional: Environment variables for base URLs or API keys
 # dotenvy = "0.15"
