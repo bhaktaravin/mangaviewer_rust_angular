@@ -6,22 +6,28 @@
 .env.local
 .env.production
 
-# API keys and secrets
-.openai_key.example
-*.key
-*.pem
+# Dependencies
+node_modules/
+target/
 
-# IDE and editor files
-.vscode/
-.idea/
-*.swp
-*.swo
-*~
+# Build outputs
+dist/
+build/
 
 # OS files
 .DS_Store
 Thumbs.db
-*.tmp
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# API keys and secrets
+.openai_key.example
+*.key
+*.pem
 
 # Logs
 *.log
