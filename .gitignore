@@ -1,6 +1,5 @@
 # Rust build artifacts
 /target
-Cargo.lock
 
 # Environment files
 .env
@@ -35,4 +34,8 @@ fly.toml.backup
 test_output/
 *.test
 
-*.sh
+# Exclude specific shell scripts but keep deployment guide
+manual_test.sh
+test_*.sh
+interactive_test.sh
+deploy.sh
