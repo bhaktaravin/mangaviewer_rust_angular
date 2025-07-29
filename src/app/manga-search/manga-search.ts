@@ -2,11 +2,12 @@ import { Component, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Apiservice, MangaSearchRequest } from '../apiservice';
+import { DisclaimerComponent } from '../disclaimer/disclaimer.component';
 
 @Component({
   selector: 'app-manga-search',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, DisclaimerComponent],
   templateUrl: './manga-search.html',
   styleUrl: './manga-search.css'
 })
