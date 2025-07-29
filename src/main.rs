@@ -1,15 +1,91 @@
 use axum::{
+    rouuse auth_mongodb::{AuthService, login_handler, register_handler, logout_handler};
+use manga_service::{MangaService, save_manga_handler, get_manga_handler, list_manga_handler, search_manga_handler};
+
+#[derive(Deserialize)]
+struct MangaQuery {
+    title: Option<String>,
+    limit: Option<u32>,
+    offset: Option<u32>,
+}
+
+async fn manga_handler(Query(params): Query<MangaQuery>) -> impl IntoResponse {
+    let mut url = "https://api.mangadx.org/manga".to_string();
+    
+    use axum::{
     routing::{get, post},
     response::IntoResponse,
     Router,
     http::StatusCode,
-    http::header::CONTENT_TYPE,
+    http::header::{CONTENT_TYPE, AUTHORIZATION},
+    http::{Method, HeaderValue},
+    extract::Query,
 };
-use tower_http::cors::CorsLayer;
+use tower_http::cors::{CorsLayer, Any};
 use tokio::net::TcpListener;
 use reqwest;
 use std::net::SocketAddr;
 use dotenv::dotenv;
+use serde::Deserialize;
+
+mod auth_mongodb;
+mod manga_service;
+
+use auth_mongodb::{AuthService, login_handler, register_handler, logout_handler};
+use manga_service::{MangaService, save_manga_handler, get_manga_handler, list_manga_handler, search_manga_handler};
+
+#[derive(Deserialize)]
+struct MangaQuery {
+    title: Option<String>,
+}
+
+async fn manga_handler(Query(params): Query<MangaQuery>) -> impl IntoResponse {
+    let mut url = "https://api.mangadx.org/manga".to_string();
+    
+    // Add title search parameter if provided
+    if let Some(title) = params.title {
+        url.push_str(&format!("?title={}", urlencoding::encode(&title)));
+    }
+    
+    let client = reqwest::Client::new();
+
+    match client
+        .get(&url)
+        .header("User-Agent", "mangadownloader/0.1 (ravin.bhakta@gmail.com)")
+        .send()
+        .await
+    {
+        Ok(resp) => match resp.text().await {
+            Ok(text) => (
+                StatusCode::OK,
+                [(CONTENT_TYPE, "application/json")],
+                text,
+            ),
+            Err(_) => (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                [(CONTENT_TYPE, "application/json")],
+                "Failed to read response from MangaDx".to_string(),
+                
+            ),
+        },
+        Err(_) => (
+            StatusCode::BAD_GATEWAY,
+            [(CONTENT_TYPE, "application/json")],
+            "Failed to fetch from MangaDx".to_string(),
+        ),
+    }
+}
+
+async fn root_handler() -> impl IntoResponse {
+    http::{Method, HeaderValue},
+    extract::Query,
+};
+use tower_http::cors::{CorsLayer, Any};
+use tokio::net::TcpListener;
+use reqwest;
+use std::net::SocketAddr;
+use dotenv::dotenv;
+use serde::Deserialize;
 
 mod auth_mongodb;
 mod manga_service;
@@ -18,7 +94,7 @@ use auth_mongodb::{AuthService, login_handler, register_handler, logout_handler}
 use manga_service::{MangaService, save_manga_handler, get_manga_handler, list_manga_handler, search_manga_handler};
 
 async fn manga_handler() -> impl IntoResponse {
-    let url = "https://api.mangadx.org/manga";
+    let url = "https://api.mangadex.org/manga";
     let client = reqwest::Client::new();
 
     match client
@@ -79,7 +155,11 @@ async fn main() {
         }
     };
 
-    let cors = CorsLayer::very_permissive();
+    // More permissive CORS for development - Firefox compatible
+    let cors = CorsLayer::new()
+        .allow_origin(tower_http::cors::Any)
+        .allow_methods([Method::GET, Method::POST, Method::OPTIONS])
+        .allow_headers([AUTHORIZATION, CONTENT_TYPE]);
 
     // Create router with auth routes
     let auth_routes = Router::new()
