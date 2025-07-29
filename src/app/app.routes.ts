@@ -1,5 +1,5 @@
 import { Routes } from '@angular/router';
-import { Home } from "./home/home";
+import { HomeComponent } from "./home/home";
 import { LoginComponent } from "./login/login";
 import { RegisterComponent } from "./register/register";
 import { ProfileComponent } from "./profile/profile";
@@ -9,7 +9,7 @@ import { authGuard, guestGuard } from "./auth.guard";
 
 export const routes: Routes = [
   { path: '', redirectTo: '/home', pathMatch: 'full' },
-  { path: 'home', component: Home },
+  { path: 'home', component: HomeComponent },
   { path: 'login', component: LoginComponent, canActivate: [guestGuard] },
   { path: 'register', component: RegisterComponent, canActivate: [guestGuard] },
   { path: 'profile', component: ProfileComponent, canActivate: [authGuard] },
