@@ -1,13 +1,27 @@
 use axum::{
+    rouuse auth_mongodb::{AuthService, login_handler, register_handler, logout_handler};
+use manga_service::{MangaService, save_manga_handler, get_manga_handler, list_manga_handler, search_manga_handler};
+
+#[derive(Deserialize)]
+struct MangaQuery {
+    title: Option<String>,
+    limit: Option<u32>,
+    offset: Option<u32>,
+}
+
+async fn manga_handler(Query(params): Query<MangaQuery>) -> impl IntoResponse {
+    let mut url = "https://api.mangadex.org/manga".to_string();
+    
+    use axum::{
     routing::{get, post},
     response::IntoResponse,
     Router,
     http::StatusCode,
     http::header::{CONTENT_TYPE, AUTHORIZATION},
-    http::Method,
+    http::{Method, HeaderValue},
     extract::Query,
 };
-use tower_http::cors::CorsLayer;
+use tower_http::cors::{CorsLayer, Any};
 use tokio::net::TcpListener;
 use reqwest;
 use std::net::SocketAddr;
@@ -51,12 +65,61 @@ async fn manga_handler(Query(params): Query<MangaQuery>) -> impl IntoResponse {
                 StatusCode::INTERNAL_SERVER_ERROR,
                 [(CONTENT_TYPE, "application/json")],
                 "Failed to read response from MangaDx".to_string(),
+                
             ),
         },
         Err(_) => (
             StatusCode::BAD_GATEWAY,
             [(CONTENT_TYPE, "application/json")],
             "Failed to fetch from MangaDx".to_string(),
+        ),
+    }
+}
+
+async fn root_handler() -> impl IntoResponse {
+    http::{Method, HeaderValue},
+    extract::Query,
+};
+use tower_http::cors::{CorsLayer, Any};
+use tokio::net::TcpListener;
+use reqwest;
+use std::net::SocketAddr;
+use dotenv::dotenv;
+use serde::Deserialize;
+
+mod auth_mongodb;
+mod manga_service;
+
+use auth_mongodb::{AuthService, login_handler, register_handler, logout_handler};
+use manga_service::{MangaService, save_manga_handler, get_manga_handler, list_manga_handler, search_manga_handler};
+
+async fn manga_handler() -> impl IntoResponse {
+    let url = "https://api.mangadex.org/manga";
+    let client = reqwest::Client::new();
+
+    match client
+        .get(url)
+        .header("User-Agent", "mangadownloader/0.1 (ravin.bhakta@gmail.com)")
+        .send()
+        .await
+    {
+        Ok(resp) => match resp.text().await {
+            Ok(text) => (
+                StatusCode::OK,
+                [(CONTENT_TYPE, "application/json")],
+                text,
+            ),
+            Err(_) => (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                [(CONTENT_TYPE, "application/json")],
+                "Failed to read response from MangaDex".to_string(),
+                
+            ),
+        },
+        Err(_) => (
+            StatusCode::BAD_GATEWAY,
+            [(CONTENT_TYPE, "application/json")],
+            "Failed to fetch from MangaDex".to_string(),
         ),
     }
 }
@@ -103,6 +166,11 @@ async fn main() {
         .route("/api/auth/login", post(login_handler))
         .route("/api/auth/register", post(register_handler))
         .route("/api/auth/logout", post(logout_handler))
+        // TODO: Add profile and admin routes after fixing handler signatures
+        // .route("/api/profile", get(profile_handler))
+        // .route("/api/profile", post(update_profile_handler))
+        // .route("/api/admin/users", get(list_users_handler))
+        // .route("/api/admin/users", post(admin_user_handler))
         .with_state(auth_service);
 
     // Create router with manga routes
@@ -127,11 +195,17 @@ async fn main() {
     println!("   POST http://{}/api/auth/login", addr);
     println!("   POST http://{}/api/auth/register", addr);
     println!("   POST http://{}/api/auth/logout", addr);
+    // println!("👤 Profile endpoints:");
+    // println!("   GET  http://{}/api/profile", addr);
+    // println!("   POST http://{}/api/profile", addr);
+    // println!("🛡️  Admin endpoints:");
+    // println!("   GET  http://{}/api/admin/users", addr);
+    // println!("   POST http://{}/api/admin/users", addr);
     println!("📖 Manga Storage endpoints:");
     println!("   POST http://{}/api/manga/save", addr);
     println!("   GET  http://{}/api/manga/:manga_id", addr);
     println!("   GET  http://{}/api/manga/list", addr);
-    println!("   GET  http://{}/api/manga?title=query", addr);
+    println!("   GET  http://{}/api/manga/search?title=query", addr);
     println!();
     println!("✅ Server ready! (Using MongoDB storage)");
 
