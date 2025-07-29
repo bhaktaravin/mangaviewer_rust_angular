@@ -18,6 +18,70 @@ export class MangaSearchComponent {
   hasMore = signal(false);
   currentPage = signal(1);
 
+  // Demo manga data for search fallback
+  private demoManga = [
+    {
+      id: 'demo-1',
+      title: 'Naruto',
+      description: 'The story of a young ninja who dreams of becoming Hokage.',
+      status: 'completed',
+      tags: ['Action', 'Adventure', 'Martial Arts', 'Shounen'],
+      author: 'Masashi Kishimoto',
+      cover_art: null,
+      demo: true
+    },
+    {
+      id: 'demo-2', 
+      title: 'One Piece',
+      description: 'Follow Monkey D. Luffy and his crew as they search for the ultimate treasure.',
+      status: 'ongoing',
+      tags: ['Action', 'Adventure', 'Comedy', 'Shounen'],
+      author: 'Eiichiro Oda',
+      cover_art: null,
+      demo: true
+    },
+    {
+      id: 'demo-3',
+      title: 'Attack on Titan',
+      description: 'Humanity fights for survival against giant humanoid titans.',
+      status: 'completed',
+      tags: ['Action', 'Drama', 'Horror', 'Shounen'],
+      author: 'Hajime Isayama',
+      cover_art: null,
+      demo: true
+    },
+    {
+      id: 'demo-4',
+      title: 'Demon Slayer',
+      description: 'A young boy becomes a demon slayer to save his sister.',
+      status: 'completed',
+      tags: ['Action', 'Historical', 'Shounen', 'Supernatural'],
+      author: 'Koyoharu Gotouge',
+      cover_art: null,
+      demo: true
+    },
+    {
+      id: 'demo-5',
+      title: 'My Hero Academia',
+      description: 'In a world of superheroes, a boy without powers dreams of becoming one.',
+      status: 'ongoing',
+      tags: ['Action', 'School', 'Shounen', 'Super Power'],
+      author: 'Kohei Horikoshi',
+      cover_art: null,
+      demo: true
+    },
+    {
+      id: 'demo-6',
+      title: 'Death Note',
+      description: 'A high school student gains the power to kill anyone by writing their name.',
+      status: 'completed',
+      tags: ['Drama', 'Psychological', 'Shounen', 'Supernatural'],
+      author: 'Tsugumi Ohba',
+      cover_art: null,
+      demo: true
+    }
+  ];
+
   constructor(private apiService: Apiservice) {}
 
   async onSearch() {
@@ -65,20 +129,38 @@ export class MangaSearchComponent {
           this.hasMore.set(false);
           
           if (mangaList.length === 0) {
-            this.error.set('No manga found for your search term');
+            this.fallbackToDemoSearch();
           }
         } else {
-          this.error.set('No manga found for your search term');
-          this.searchResults.set([]);
+          this.fallbackToDemoSearch();
         }
       }
     } catch (error: any) {
       console.error('Search error:', error);
-      this.error.set('Failed to search manga. Please try again.');
-      this.searchResults.set([]);
+      console.log('API unavailable, falling back to demo data...');
+      this.fallbackToDemoSearch();
     } finally {
       this.loading.set(false);
     }
+  }
+
+  private fallbackToDemoSearch() {
+    const query = this.searchQuery().toLowerCase().trim();
+    const filteredManga = this.demoManga.filter(manga => 
+      manga.title.toLowerCase().includes(query) ||
+      manga.description.toLowerCase().includes(query) ||
+      manga.tags.some(tag => tag.toLowerCase().includes(query)) ||
+      manga.author.toLowerCase().includes(query)
+    );
+
+    if (filteredManga.length > 0) {
+      this.searchResults.set(filteredManga);
+      this.error.set('Showing demo results (backend unavailable)');
+    } else {
+      this.error.set('No manga found in demo data. Try searching for: Naruto, One Piece, Attack on Titan, Demon Slayer, My Hero Academia, or Death Note');
+      this.searchResults.set([]);
+    }
+    this.hasMore.set(false);
   }
 
   async loadMore() {
