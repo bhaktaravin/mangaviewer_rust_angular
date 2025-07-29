@@ -182,6 +182,11 @@ export class Apiservice {
     });
   }
 
+  // Get all manga - alias for getUserLibrary for backward compatibility
+  getAllManga(): Observable<any> {
+    return this.getUserLibrary();
+  }
+
   // Health check endpoint
   healthCheck(): Observable<any> {
     return this.http.get(`${this.baseUrl}`, {
