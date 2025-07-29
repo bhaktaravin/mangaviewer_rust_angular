@@ -1,0 +1,63 @@
+<div class="profile-container">
+  @if (isAuthenticated() && user()) {
+    <div class="profile-content">
+      <div class="profile-header">
+        <div class="avatar">
+          <span class="avatar-text">{{ user()!.username.charAt(0).toUpperCase() }}</span>
+        </div>
+        <h1>{{ user()!.username }}</h1>
+        <p class="email">{{ user()!.email }}</p>
+      </div>
+
+      <div class="profile-section">
+        <h2>Account Information</h2>
+        <div class="info-grid">
+          <div class="info-item">
+            <label>Username:</label>
+            <span>{{ user()!.username }}</span>
+          </div>
+          <div class="info-item">
+            <label>Email:</label>
+            <span>{{ user()!.email }}</span>
+          </div>
+          <div class="info-item">
+            <label>User ID:</label>
+            <span>#{{ user()!.id }}</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="profile-section">
+        <h2>Manga Statistics</h2>
+        <div class="stats-grid">
+          <div class="stat-card">
+            <div class="stat-number">0</div>
+            <div class="stat-label">Manga Read</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-number">0</div>
+            <div class="stat-label">Favorites</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-number">0</div>
+            <div class="stat-label">Reading List</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="profile-actions">
+        <button class="btn btn-secondary" (click)="editProfile()">
+          Edit Profile
+        </button>
+        <button class="btn btn-danger" (click)="logout()">
+          Logout
+        </button>
+      </div>
+    </div>
+  } @else {
+    <div class="not-authenticated">
+      <h2>Access Denied</h2>
+      <p>Please log in to view your profile.</p>
+    </div>
+  }
+</div>

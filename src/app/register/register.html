@@ -1,0 +1,123 @@
+<div class="register-container">
+  <div class="register-form">
+    <h2>Join Manga Viewer</h2>
+    
+    <form (ngSubmit)="onSubmit()" #registerForm="ngForm">
+      <div class="form-group">
+        <label for="username">Username:</label>
+        <input
+          type="text"
+          id="username"
+          name="username"
+          [ngModel]="username()"
+          (ngModelChange)="username.set($event)"
+          required
+          minlength="3"
+          class="form-control"
+          placeholder="Choose a username"
+        />
+      </div>
+
+      <div class="form-group">
+        <label for="email">Email:</label>
+        <input
+          type="email"
+          id="email"
+          name="email"
+          [ngModel]="email()"
+          (ngModelChange)="email.set($event)"
+          required
+          email
+          class="form-control"
+          placeholder="Enter your email"
+        />
+      </div>
+
+      <div class="form-group">
+        <label for="password">Password:</label>
+        <input
+          type="password"
+          id="password"
+          name="password"
+          [ngModel]="password()"
+          (ngModelChange)="password.set($event)"
+          required
+          minlength="6"
+          class="form-control"
+          placeholder="Create a password"
+        />
+      </div>
+
+      <div class="form-group">
+        <label for="confirmPassword">Confirm Password:</label>
+        <input
+          type="password"
+          id="confirmPassword"
+          name="confirmPassword"
+          [ngModel]="confirmPassword()"
+          (ngModelChange)="confirmPassword.set($event)"
+          required
+          class="form-control"
+          placeholder="Confirm your password"
+        />
+      </div>
+
+      @if (error()) {
+        <div class="error-message">
+          {{ error() }}
+          @if (error().includes('Server error') || error().includes('Internal server error')) {
+            <div class="error-details">
+              <p><strong>Development Note:</strong> The backend registration service appears to be experiencing issues. This might be due to:</p>
+              <ul>
+                <li>Database connectivity problems</li>
+                <li>Incomplete registration endpoint implementation</li>
+                <li>Server configuration issues</li>
+              </ul>
+              <p>For now, you can still explore the demo features of the application.</p>
+            </div>
+          }
+        </div>
+      }
+
+      <button
+        type="submit"
+        class="btn btn-primary"
+        [disabled]="loading() || !registerForm.valid"
+      >
+        @if (loading()) {
+          <span class="spinner"></span>
+          Creating Account...
+        } @else {
+          Create Account
+        }
+      </button>
+
+      @if (error().includes('Server error') || error().includes('Internal server error')) {
+        <div class="guest-access">
+          <hr>
+          <p class="guest-text">Can't register right now? You can still explore the application:</p>
+          <button type="button" class="btn btn-outline" (click)="continueAsGuest()">
+            🧪 Continue as Guest (Demo Mode)
+          </button>
+        </div>
+      }
+    </form>
+
+    <div class="login-link">
+      <p>Already have an account? 
+        <button type="button" class="btn btn-link" (click)="goToLogin()">
+          Login here
+        </button>
+      </p>
+    </div>
+
+    <!-- Always Available Guest Access -->
+    <div class="guest-access-permanent">
+      <hr>
+      <p class="guest-text">Just want to explore? You can try the demo:</p>
+      <button type="button" class="btn btn-outline" (click)="continueAsGuest()">
+        🧪 Continue as Guest (Demo Mode)
+      </button>
+    </div>
+  </div>
+</div>

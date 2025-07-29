@@ -1,0 +1,523 @@
+<div class="library-container">
+  <!-- Header Section -->
+  <header class="library-header">
+    <div class="header-content">
+      <h1>📚 My Library</h1>
+      <button class="btn btn-primary" (click)="openAddModal()">
+        <span class="icon">➕</span>
+        Add Manga
+      </button>
+    </div>
+    
+    <!-- Demo Mode Indicator -->
+    @if (isDemoMode()) {
+      <div class="demo-notice">
+        <span class="demo-icon">🧪</span>
+        <strong>Demo Mode:</strong> Connected to production backend, but library endpoints are not yet implemented. Showing sample data to demonstrate functionality.
+        <button class="btn btn-sm btn-outline" (click)="loadLibrary()">
+          Check Again
+        </button>
+      </div>
+    }
+    
+    <!-- Library Stats -->
+    @if (stats()) {
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="stat-number">{{ stats()!.total_manga }}</div>
+          <div class="stat-label">Total Manga</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-number">{{ stats()!.reading }}</div>
+          <div class="stat-label">Currently Reading</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-number">{{ stats()!.completed }}</div>
+          <div class="stat-label">Completed</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-number">{{ stats()!.total_chapters_read }}</div>
+          <div class="stat-label">Chapters Read</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-number">{{ stats()!.average_rating | number:'1.1-1' }}</div>
+          <div class="stat-label">Avg Rating</div>
+        </div>
+      </div>
+    }
+  </header>
+
+  <!-- Filters and Controls -->
+  <section class="library-controls">
+    <div class="controls-row">
+      <!-- Search -->
+      <div class="search-container">
+        <input 
+          type="text" 
+          placeholder="Search your library..." 
+          class="search-input"
+          [(ngModel)]="searchQuery"
+          (input)="searchQuery.set($any($event.target).value)"
+        />
+        <span class="search-icon">🔍</span>
+      </div>
+
+      <!-- Filters -->
+      <div class="filters-container">
+        <select 
+          class="filter-select" 
+          [(ngModel)]="selectedStatus"
+          (change)="selectedStatus.set($any($event.target).value)"
+        >
+          @for (option of statusOptions; track option.value) {
+            <option [value]="option.value">{{ option.label }}</option>
+          }
+        </select>
+
+        <select 
+          class="filter-select" 
+          [(ngModel)]="selectedSort"
+          (change)="selectedSort.set($any($event.target).value)"
+        >
+          @for (option of sortOptions; track option.value) {
+            <option [value]="option.value">{{ option.label }}</option>
+          }
+        </select>
+
+        <button 
+          class="filter-toggle"
+          [class.active]="showFavoritesOnly()"
+          (click)="showFavoritesOnly.set(!showFavoritesOnly())"
+        >
+          ⭐ Favorites Only
+        </button>
+      </div>
+
+      <!-- View Mode Toggle -->
+      <div class="view-toggle">
+        <button 
+          class="view-btn"
+          [class.active]="viewMode() === 'grid'"
+          (click)="viewMode.set('grid')"
+        >
+          ⊞ Grid
+        </button>
+        <button 
+          class="view-btn"
+          [class.active]="viewMode() === 'list'"
+          (click)="viewMode.set('list')"
+        >
+          ☰ List
+        </button>
+      </div>
+    </div>
+  </section>
+
+  <!-- Loading State -->
+  @if (isLoading()) {
+    <div class="loading-container">
+      <div class="loading-spinner"></div>
+      <p>Loading your library...</p>
+    </div>
+  }
+
+  <!-- Error State -->
+  @if (error()) {
+    <div class="error-message">
+      <span class="error-icon">⚠️</span>
+      {{ error() }}
+      <button class="btn btn-sm" (click)="loadLibrary()">Retry</button>
+    </div>
+  }
+
+  <!-- Library Content -->
+  @if (!isLoading() && !error()) {
+    <section class="library-content">
+      @if (filteredLibrary().length === 0) {
+        <div class="empty-state">
+          <div class="empty-icon">📚</div>
+          <h3>No manga found</h3>
+          <p>{{ searchQuery() ? 'Try adjusting your search or filters' : 'Start building your library by adding some manga!' }}</p>
+          @if (!searchQuery()) {
+            <button class="btn btn-primary" (click)="openAddModal()">Add Your First Manga</button>
+          }
+        </div>
+      } @else {
+        <!-- Grid View -->
+        @if (viewMode() === 'grid') {
+          <div class="manga-grid">
+            @for (manga of filteredLibrary(); track manga.id) {
+              <div class="manga-card">
+                <div class="manga-cover">
+                  @if (manga.cover_url) {
+                    <img [src]="manga.cover_url" [alt]="manga.title" />
+                  } @else {
+                    <div class="no-cover">📖</div>
+                  }
+                  
+                  <!-- Quick Actions -->
+                  <div class="quick-actions">
+                    <button 
+                      class="quick-btn favorite"
+                      [class.active]="manga.is_favorite"
+                      (click)="toggleFavorite(manga)"
+                    >
+                      {{ manga.is_favorite ? '❤️' : '🤍' }}
+                    </button>
+                    <button class="quick-btn" (click)="openEditModal(manga)">✏️</button>
+                  </div>
+
+                  <!-- Status Badge -->
+                  <div class="status-badge" [style.background-color]="getStatusColor(manga.status)">
+                    {{ manga.status.replace('_', ' ') }}
+                  </div>
+                </div>
+
+                <div class="manga-info">
+                  <h3 class="manga-title">{{ manga.title }}</h3>
+                  @if (manga.author) {
+                    <p class="manga-author">by {{ manga.author }}</p>
+                  }
+
+                  <!-- Progress Bar -->
+                  @if (manga.progress.total_chapters) {
+                    <div class="progress-container">
+                      <div class="progress-bar">
+                        <div 
+                          class="progress-fill" 
+                          [style.width.%]="getProgressPercentage(manga)"
+                        ></div>
+                      </div>
+                      <span class="progress-text">
+                        {{ manga.progress.current_chapter }}/{{ manga.progress.total_chapters }} chapters
+                      </span>
+                    </div>
+                  }
+
+                  <!-- Rating -->
+                  @if (manga.rating) {
+                    <div class="rating">
+                      @for (star of [1,2,3,4,5]; track star) {
+                        <span [class]="star <= manga.rating! ? 'star filled' : 'star'">⭐</span>
+                      }
+                    </div>
+                  }
+
+                  <!-- Tags -->
+                  @if (manga.tags.length > 0) {
+                    <div class="tags">
+                      @for (tag of manga.tags.slice(0, 3); track tag) {
+                        <span class="tag">{{ tag }}</span>
+                      }
+                      @if (manga.tags.length > 3) {
+                        <span class="tag more">+{{ manga.tags.length - 3 }}</span>
+                      }
+                    </div>
+                  }
+
+                  <!-- Quick Progress Update -->
+                  <div class="quick-progress">
+                    <button 
+                      class="btn btn-sm btn-outline"
+                      (click)="updateProgress(manga, manga.progress.current_chapter + 1)"
+                    >
+                      +1 Chapter
+                    </button>
+                  </div>
+                </div>
+              </div>
+            }
+          </div>
+        }
+
+        <!-- List View -->
+        @if (viewMode() === 'list') {
+          <div class="manga-list">
+            @for (manga of filteredLibrary(); track manga.id) {
+              <div class="manga-row">
+                <div class="row-cover">
+                  @if (manga.cover_url) {
+                    <img [src]="manga.cover_url" [alt]="manga.title" />
+                  } @else {
+                    <div class="no-cover-small">📖</div>
+                  }
+                </div>
+
+                <div class="row-info">
+                  <div class="row-main">
+                    <h3>{{ manga.title }}</h3>
+                    @if (manga.author) {
+                      <span class="author">by {{ manga.author }}</span>
+                    }
+                  </div>
+
+                  <div class="row-progress">
+                    @if (manga.progress.total_chapters) {
+                      <span>{{ manga.progress.current_chapter }}/{{ manga.progress.total_chapters }}</span>
+                      <div class="mini-progress">
+                        <div 
+                          class="mini-progress-fill" 
+                          [style.width.%]="getProgressPercentage(manga)"
+                        ></div>
+                      </div>
+                    } @else {
+                      <span>Ch. {{ manga.progress.current_chapter }}</span>
+                    }
+                  </div>
+
+                  <div class="row-status">
+                    <span 
+                      class="status-pill"
+                      [style.background-color]="getStatusColor(manga.status)"
+                    >
+                      {{ manga.status.replace('_', ' ') }}
+                    </span>
+                  </div>
+
+                  <div class="row-rating">
+                    @if (manga.rating) {
+                      <span>{{ manga.rating }}/5 ⭐</span>
+                    } @else {
+                      <span class="no-rating">-</span>
+                    }
+                  </div>
+
+                  <div class="row-actions">
+                    <button 
+                      class="action-btn"
+                      [class.favorite]="manga.is_favorite"
+                      (click)="toggleFavorite(manga)"
+                    >
+                      {{ manga.is_favorite ? '❤️' : '🤍' }}
+                    </button>
+                    <button class="action-btn" (click)="openEditModal(manga)">✏️</button>
+                    <button class="action-btn danger" (click)="deleteManga(manga.id)">🗑️</button>
+                  </div>
+                </div>
+              </div>
+            }
+          </div>
+        }
+      }
+    </section>
+  }
+
+  <!-- Add Manga Modal -->
+  @if (showAddModal()) {
+    <div class="modal-overlay" (click)="closeAddModal()">
+      <div class="modal-content" (click)="$event.stopPropagation()">
+        <div class="modal-header">
+          <h2>Add Manga to Library</h2>
+          <button class="modal-close" (click)="closeAddModal()">✕</button>
+        </div>
+
+        <form class="modal-form" (ngSubmit)="addManga()">
+          <div class="form-group">
+            <label>Title *</label>
+            <input 
+              type="text" 
+              [(ngModel)]="newManga().title"
+              (input)="updateNewMangaTitle($any($event.target).value)"
+              name="title"
+              required 
+            />
+          </div>
+
+          <div class="form-group">
+            <label>Author</label>
+            <input 
+              type="text" 
+              [(ngModel)]="newManga().author"
+              (input)="updateNewMangaAuthor($any($event.target).value)"
+              name="author"
+            />
+          </div>
+
+          <div class="form-group">
+            <label>Description</label>
+            <textarea 
+              [(ngModel)]="newManga().description"
+              (input)="updateNewMangaDescription($any($event.target).value)"
+              name="description"
+              rows="3"
+            ></textarea>
+          </div>
+
+          <div class="form-group">
+            <label>Cover URL</label>
+            <input 
+              type="url" 
+              [(ngModel)]="newManga().cover_url"
+              (input)="updateNewMangaCoverUrl($any($event.target).value)"
+              name="cover_url"
+            />
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label>Status</label>
+              <select 
+                [(ngModel)]="newManga().status"
+                (change)="updateNewMangaStatus($any($event.target).value)"
+                name="status"
+              >
+                <option value="plan_to_read">Plan to Read</option>
+                <option value="reading">Currently Reading</option>
+                <option value="on_hold">On Hold</option>
+                <option value="completed">Completed</option>
+                <option value="dropped">Dropped</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label>Rating</label>
+              <select 
+                [(ngModel)]="newManga().rating"
+                (change)="updateNewMangaRating($any($event.target).value)"
+                name="rating"
+              >
+                <option value="">No Rating</option>
+                <option value="1">1 ⭐</option>
+                <option value="2">2 ⭐</option>
+                <option value="3">3 ⭐</option>
+                <option value="4">4 ⭐</option>
+                <option value="5">5 ⭐</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label>Current Chapter</label>
+              <input 
+                type="number" 
+                [(ngModel)]="newManga().current_chapter"
+                (input)="updateNewMangaCurrentChapter($any($event.target).value)"
+                name="current_chapter"
+                min="0"
+              />
+            </div>
+
+            <div class="form-group">
+              <label>Total Chapters</label>
+              <input 
+                type="number" 
+                [(ngModel)]="newManga().total_chapters"
+                (input)="updateNewMangaTotalChapters($any($event.target).value)"
+                name="total_chapters"
+                min="1"
+              />
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label>Notes</label>
+            <textarea 
+              [(ngModel)]="newManga().notes"
+              (input)="updateNewMangaNotes($any($event.target).value)"
+              name="notes"
+              rows="2"
+              placeholder="Personal notes about this manga..."
+            ></textarea>
+          </div>
+
+          <div class="modal-actions">
+            <button type="button" class="btn btn-outline" (click)="closeAddModal()">Cancel</button>
+            <button type="submit" class="btn btn-primary">Add to Library</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  }
+
+  <!-- Edit Manga Modal -->
+  @if (showEditModal() && selectedManga()) {
+    <div class="modal-overlay" (click)="closeEditModal()">
+      <div class="modal-content" (click)="$event.stopPropagation()">
+        <div class="modal-header">
+          <h2>Edit {{ selectedManga()!.title }}</h2>
+          <button class="modal-close" (click)="closeEditModal()">✕</button>
+        </div>
+
+        <form class="modal-form" (ngSubmit)="updateManga()">
+          <div class="form-group">
+            <label>Status</label>
+            <select 
+              [(ngModel)]="selectedManga()!.status"
+              (change)="updateStatus(selectedManga()!, $any($event.target).value)"
+              name="status"
+            >
+              <option value="plan_to_read">Plan to Read</option>
+              <option value="reading">Currently Reading</option>
+              <option value="on_hold">On Hold</option>
+              <option value="completed">Completed</option>
+              <option value="dropped">Dropped</option>
+            </select>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label>Current Chapter</label>
+              <input 
+                type="number" 
+                [value]="selectedManga()!.progress.current_chapter"
+                (input)="updateProgress(selectedManga()!, +$any($event.target).value || 0)"
+                name="current_chapter"
+                min="0"
+              />
+            </div>
+
+            <div class="form-group">
+              <label>Total Chapters</label>
+              <input 
+                type="number" 
+                [value]="selectedManga()!.progress.total_chapters || ''"
+                (input)="updateTotalChapters(selectedManga()!, +$any($event.target).value || undefined)"
+                name="total_chapters"
+                min="1"
+              />
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label>Rating</label>
+            <select 
+              [value]="selectedManga()!.rating || ''"
+              (change)="updateRating(selectedManga()!, $any($event.target).value)"
+              name="rating"
+            >
+              <option value="">No Rating</option>
+              <option value="1">1 ⭐</option>
+              <option value="2">2 ⭐</option>
+              <option value="3">3 ⭐</option>
+              <option value="4">4 ⭐</option>
+              <option value="5">5 ⭐</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label>Notes</label>
+            <textarea 
+              [value]="selectedManga()!.notes || ''"
+              (input)="updateNotes(selectedManga()!, $any($event.target).value)"
+              name="notes"
+              rows="3"
+              placeholder="Personal notes about this manga..."
+            ></textarea>
+          </div>
+
+          <div class="modal-actions">
+            <button type="button" class="btn btn-outline" (click)="closeEditModal()">Close</button>
+            <button 
+              type="button" 
+              class="btn btn-danger" 
+              (click)="deleteManga(selectedManga()!.id)"
+            >
+              Remove from Library
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  }
+</div>
