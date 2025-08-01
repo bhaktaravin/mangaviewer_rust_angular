@@ -49,7 +49,7 @@ struct DownloadFilesQuery {
 }
 
 async fn manga_handler(Query(params): Query<MangaQuery>) -> impl IntoResponse {
-    let mut url = "https://api.mangadx.org/manga".to_string();
+    let mut url = "https://api.mangadex.org/manga".to_string();
     
     if let Some(title) = params.title {
         url.push_str(&format!("?title={}", urlencoding::encode(&title)));
@@ -72,19 +72,19 @@ async fn manga_handler(Query(params): Query<MangaQuery>) -> impl IntoResponse {
             Err(_) => (
                 StatusCode::INTERNAL_SERVER_ERROR,
                 [(CONTENT_TYPE, "application/json")],
-                "Failed to read response from MangaDx".to_string(),
+                "Failed to read response from MangaDex".to_string(),
             ),
         },
         Err(_) => (
             StatusCode::BAD_GATEWAY,
             [(CONTENT_TYPE, "application/json")],
-            "Failed to fetch from MangaDx".to_string(),
+            "Failed to fetch from MangaDex".to_string(),
         ),
     }
 }
 
 async fn chapters_handler(Path(manga_id): Path<String>, Query(params): Query<ChapterQuery>) -> impl IntoResponse {
-    let mut url = format!("https://api.mangadx.org/manga/{}/feed", manga_id);
+    let mut url = format!("https://api.mangadex.org/manga/{}/feed", manga_id);
     
     let mut query_params = vec![];
     
@@ -122,13 +122,13 @@ async fn chapters_handler(Path(manga_id): Path<String>, Query(params): Query<Cha
             Err(_) => (
                 StatusCode::INTERNAL_SERVER_ERROR,
                 [(CONTENT_TYPE, "application/json")],
-                "Failed to read response from MangaDx".to_string(),
+                "Failed to read response from MangaDex".to_string(),
             ),
         },
         Err(_) => (
             StatusCode::BAD_GATEWAY,
             [(CONTENT_TYPE, "application/json")],
-            "Failed to fetch chapters from MangaDx".to_string(),
+            "Failed to fetch chapters from MangaDex".to_string(),
         ),
     }
 }
@@ -136,7 +136,7 @@ async fn chapters_handler(Path(manga_id): Path<String>, Query(params): Query<Cha
 async fn download_handler(Query(params): Query<DownloadQuery>) -> impl IntoResponse {
     let client = reqwest::Client::new();
     
-    let server_url = format!("https://api.mangadx.org/at-home/server/{}", params.chapter_id);
+    let server_url = format!("https://api.mangadex.org/at-home/server/{}", params.chapter_id);
     
     match client
         .get(&server_url)
@@ -153,13 +153,13 @@ async fn download_handler(Query(params): Query<DownloadQuery>) -> impl IntoRespo
             Err(_) => (
                 StatusCode::INTERNAL_SERVER_ERROR,
                 [(CONTENT_TYPE, "application/json")],
-                "Failed to read server response from MangaDx".to_string(),
+                "Failed to read server response from MangaDex".to_string(),
             ),
         },
         Err(_) => (
             StatusCode::BAD_GATEWAY,
             [(CONTENT_TYPE, "application/json")],
-            "Failed to fetch download info from MangaDx".to_string(),
+            "Failed to fetch download info from MangaDex".to_string(),
         ),
     }
 }
@@ -167,7 +167,7 @@ async fn download_handler(Query(params): Query<DownloadQuery>) -> impl IntoRespo
 async fn download_files_handler(Query(params): Query<DownloadFilesQuery>) -> impl IntoResponse {
     let client = reqwest::Client::new();
     
-    let server_url = format!("https://api.mangadx.org/at-home/server/{}", params.chapter_id);
+    let server_url = format!("https://api.mangadex.org/at-home/server/{}", params.chapter_id);
     
     let download_response = match client
         .get(&server_url)
@@ -186,7 +186,7 @@ async fn download_files_handler(Query(params): Query<DownloadFilesQuery>) -> imp
         Err(_) => return (
             StatusCode::BAD_GATEWAY,
             [(CONTENT_TYPE, "application/json")],
-            "{\"error\": \"Failed to fetch download info from MangaDx\"}".to_string(),
+            "{\"error\": \"Failed to fetch download info from MangaDex\"}".to_string(),
         ),
     };
 
@@ -197,7 +197,8 @@ async fn download_files_handler(Query(params): Query<DownloadFilesQuery>) -> imp
     let images_key = if quality == "saver" { "dataSaver" } else { "data" };
     let url_path = if quality == "saver" { "data-saver" } else { "data" };
     
-    let images = download_response["chapter"][images_key].as_array().unwrap_or(&vec![]);
+    let empty_vec = vec![];
+    let images = download_response["chapter"][images_key].as_array().unwrap_or(&empty_vec);
     
     if images.is_empty() {
         return (
