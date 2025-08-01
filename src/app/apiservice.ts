@@ -47,14 +47,11 @@ export class Apiservice {
   constructor(private http: HttpClient) { }
 
   private getBaseUrl(): string {
-    // Always use production backend on fly.io
+    // Use localhost for development, fallback to production
+    if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+      return 'http://localhost:3000';
+    }
     return 'https://api-nameless-haze-4648.fly.dev';
-    
-    // Uncomment below to use localhost for development:
-    // if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
-    //   return 'http://localhost:3000';
-    // }
-    // return 'https://api-nameless-haze-4648.fly.dev';
   }
 
   private getAuthHeaders(): HttpHeaders {
@@ -99,6 +96,38 @@ export class Apiservice {
   // External manga search (MangaDx API)
   searchExternalManga(query: string): Observable<any> {
     return this.http.get(`${this.baseUrl}/api/manga?title=${encodeURIComponent(query)}`, {
+      headers: this.getAuthHeaders()
+    });
+  }
+
+  // Get chapters for a specific manga
+  getMangaChapters(mangaId: string, chapter?: string, lang: string = 'en'): Observable<any> {
+    let url = `${this.baseUrl}/api/manga/${mangaId}/chapters?translatedLanguage[]=${lang}`;
+    if (chapter) {
+      url += `&chapter=${encodeURIComponent(chapter)}`;
+    }
+    return this.http.get(url, {
+      headers: this.getAuthHeaders()
+    });
+  }
+
+  // Get download info for a chapter
+  getChapterDownloadInfo(chapterId: string): Observable<any> {
+    return this.http.get(`${this.baseUrl}/api/manga/download?chapter_id=${chapterId}`, {
+      headers: this.getAuthHeaders()
+    });
+  }
+
+  // Download files to custom location
+  downloadFiles(chapterId: string, savePath: string, mangaTitle?: string, chapterTitle?: string, quality: string = 'high'): Observable<any> {
+    let url = `${this.baseUrl}/api/manga/download-files?chapter_id=${chapterId}&save_path=${encodeURIComponent(savePath)}&quality=${quality}`;
+    if (mangaTitle) {
+      url += `&manga_title=${encodeURIComponent(mangaTitle)}`;
+    }
+    if (chapterTitle) {
+      url += `&chapter_title=${encodeURIComponent(chapterTitle)}`;
+    }
+    return this.http.get(url, {
       headers: this.getAuthHeaders()
     });
   }

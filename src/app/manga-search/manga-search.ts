@@ -3,11 +3,12 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Apiservice, MangaSearchRequest } from '../apiservice';
 import { DisclaimerComponent } from '../disclaimer/disclaimer.component';
+import { MangaDetailComponent } from '../manga-detail/manga-detail';
 
 @Component({
   selector: 'app-manga-search',
   standalone: true,
-  imports: [CommonModule, FormsModule, DisclaimerComponent],
+  imports: [CommonModule, FormsModule, DisclaimerComponent, MangaDetailComponent],
   templateUrl: './manga-search.html',
   styleUrl: './manga-search.css'
 })
@@ -18,6 +19,8 @@ export class MangaSearchComponent {
   error = signal('');
   hasMore = signal(false);
   currentPage = signal(1);
+  selectedManga = signal<any>(null);
+  showDetails = signal(false);
 
   // Demo manga data for search fallback
   private demoManga = [
@@ -205,5 +208,15 @@ export class MangaSearchComponent {
     if (event.key === 'Enter') {
       this.onSearch();
     }
+  }
+
+  showMangaDetails(manga: any) {
+    this.selectedManga.set(manga);
+    this.showDetails.set(true);
+  }
+
+  hideMangaDetails() {
+    this.showDetails.set(false);
+    this.selectedManga.set(null);
   }
 }

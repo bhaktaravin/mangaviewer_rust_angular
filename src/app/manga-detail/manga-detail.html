@@ -1,0 +1,268 @@
+<div class="manga-detail-container">
+  <!-- Manga Info Header -->
+  <div class="manga-header">
+    <div class="manga-cover">
+      @if (manga().cover_image || manga().thumbnail) {
+        <img 
+          [src]="manga().cover_image || manga().thumbnail" 
+          [alt]="manga().title || manga().name"
+          onerror="this.src='https://via.placeholder.com/200x300?text=No+Image'"
+        />
+      } @else {
+        <div class="placeholder-cover">
+          <span class="placeholder-text">📚</span>
+        </div>
+      }
+    </div>
+    
+    <div class="manga-info">
+      <h1 class="manga-title">{{ manga().title || manga().name || 'Unknown Title' }}</h1>
+      
+      @if (manga().author || manga().authors) {
+        <p class="manga-author">
+          <strong>Author:</strong> {{ manga().author || manga().authors }}
+        </p>
+      }
+      
+      @if (manga().status) {
+        <p class="manga-status">
+          <strong>Status:</strong> 
+          <span class="status-badge" [class]="manga().status">
+            {{ manga().status | titlecase }}
+          </span>
+        </p>
+      }
+      
+      @if (manga().description) {
+        <p class="manga-description">{{ manga().description }}</p>
+      }
+      
+      @if (manga().genre || manga().genres || manga().tags) {
+        <div class="manga-tags">
+          <strong>Tags:</strong>
+          <div class="tags-list">
+            @for (tag of (manga().tags || manga().genre?.split(',') || manga().genres?.split(',') || []); track $index) {
+              <span class="tag">{{ tag.trim() }}</span>
+            }
+          </div>
+        </div>
+      }
+    </div>
+  </div>
+
+  <!-- Chapters Section -->
+  <div class="chapters-section">
+    <div class="section-header">
+      <h2>📖 Chapters</h2>
+      @if (chapters().length > 0) {
+        <span class="chapter-count">{{ chapters().length }} chapters available</span>
+      }
+    </div>
+
+    @if (loading()) {
+      <div class="loading-state">
+        <span class="spinner"></span>
+        Loading chapters...
+      </div>
+    }
+
+    @if (error() && !loading()) {
+      <div class="error-message">
+        <span class="error-icon">⚠️</span>
+        {{ error() }}
+        <button class="btn btn-small" (click)="loadChapters()">Retry</button>
+      </div>
+    }
+
+    @if (chapters().length > 0) {
+      <div class="chapters-list">
+        @for (chapter of chapters(); track chapter.id) {
+          <div class="chapter-item">
+            <div class="chapter-info">
+              <h4 class="chapter-title">{{ getChapterTitle(chapter) }}</h4>
+              <div class="chapter-meta">
+                @if (chapter.attributes.volume) {
+                  <span class="volume">Vol. {{ chapter.attributes.volume }}</span>
+                }
+                <span class="pages">{{ chapter.attributes.pages }} pages</span>
+                <span class="language">{{ chapter.attributes.translatedLanguage.toUpperCase() }}</span>
+                <span class="date">{{ chapter.attributes.publishAt | date:'shortDate' }}</span>
+              </div>
+            </div>
+            
+            <div class="chapter-actions">
+              <button class="btn btn-outline btn-small">
+                📖 Read Online
+              </button>
+              <button 
+                class="btn btn-primary btn-small"
+                (click)="openDownloadModal(chapter)"
+              >
+                💾 Download
+              </button>
+            </div>
+          </div>
+        }
+      </div>
+    }
+  </div>
+
+  <!-- Download Modal -->
+  @if (showDownloadModal()) {
+    <div class="modal-overlay" (click)="closeDownloadModal()">
+      <div class="modal-content" (click)="$event.stopPropagation()">
+        <div class="modal-header">
+          <h3>💾 Download Chapter</h3>
+          <button class="modal-close" (click)="closeDownloadModal()">×</button>
+        </div>
+        
+        <div class="modal-body">
+          @if (selectedChapter()) {
+            <div class="download-info">
+              <h4>{{ getChapterTitle(selectedChapter()!) }}</h4>
+              <p>{{ selectedChapter()!.attributes.pages }} pages</p>
+            </div>
+          }
+          
+          <div class="download-settings">
+            <div class="setting-group">
+              <label for="quickPaths">Quick Path Selection:</label>
+              <select
+                id="quickPaths"
+                [ngModel]="selectedCommonPath()"
+                (ngModelChange)="onCommonPathChange($event)"
+                class="setting-select"
+              >
+                @for (pathOption of commonPaths; track pathOption.path) {
+                  <option [value]="pathOption.path">{{ pathOption.label }}</option>
+                }
+              </select>
+              <small class="setting-help">Choose from common download locations</small>
+            </div>
+
+            <div class="setting-group">
+              <label for="savePath">Save Location:</label>
+              <div class="path-input-group">
+                <input
+                  id="savePath"
+                  type="text"
+                  [ngModel]="downloadSettings().savePath"
+                  (ngModelChange)="updateDownloadSetting('savePath', $event)"
+                  placeholder="/path/to/download/folder"
+                  class="setting-input path-input"
+                  [class.invalid]="!isValidPath(downloadSettings().savePath)"
+                />
+                <button
+                  type="button"
+                  class="btn btn-outline btn-small browse-btn"
+                  (click)="openDirectoryPicker()"
+                  title="Browse for folder"
+                >
+                  📁 Browse
+                </button>
+                <button
+                  type="button"
+                  class="btn btn-outline btn-small"
+                  (click)="promptForCustomPath()"
+                  title="Enter custom path"
+                >
+                  ✏️ Custom
+                </button>
+              </div>
+              <small class="setting-help">
+                @if (!isValidPath(downloadSettings().savePath)) {
+                  <span class="error-text">⚠️ Please enter a valid download path</span>
+                } @else {
+                  <div class="path-preview">
+                    <strong>📁 Files will be saved to:</strong><br>
+                    <code class="save-path-display">{{ downloadSettings().savePath }}/{{ downloadSettings().mangaTitle }}/{{ getChapterTitle(selectedChapter()!) }}</code>
+                  </div>
+                }
+              </small>
+            </div>
+            
+            <div class="setting-group">
+              <label for="mangaTitle">Manga Title:</label>
+              <input
+                id="mangaTitle"
+                type="text"
+                [ngModel]="downloadSettings().mangaTitle"
+                (ngModelChange)="updateDownloadSetting('mangaTitle', $event)"
+                class="setting-input"
+              />
+              <small class="setting-help">Used for folder organization</small>
+            </div>
+            
+            <div class="setting-group">
+              <label for="quality">Quality:</label>
+              <select
+                id="quality"
+                [ngModel]="downloadSettings().quality"
+                (ngModelChange)="updateDownloadSetting('quality', $event)"
+                class="setting-select"
+              >
+                <option value="high">High Quality {{ formatFileSize('high') }}</option>
+                <option value="saver">Data Saver {{ formatFileSize('saver') }}</option>
+              </select>
+              <small class="setting-help">High quality uses more storage but better image quality</small>
+            </div>
+          </div>
+          
+          @if (downloadProgress()) {
+            <div class="download-result">
+              <div class="success-message">
+                <span class="success-icon">✅</span>
+                <strong>{{ downloadProgress().message }}</strong>
+              </div>
+              
+              <div class="download-details">
+                <p><strong>Saved to:</strong> {{ downloadProgress().save_path }}</p>
+                <p><strong>Files downloaded:</strong> {{ downloadProgress().successful_downloads }}/{{ downloadProgress().total_pages }}</p>
+                
+                @if (downloadProgress().failed_downloads.length > 0) {
+                  <div class="failed-downloads">
+                    <p><strong>Failed downloads:</strong></p>
+                    <ul>
+                      @for (failure of downloadProgress().failed_downloads; track $index) {
+                        <li>{{ failure }}</li>
+                      }
+                    </ul>
+                  </div>
+                }
+              </div>
+            </div>
+          }
+          
+          @if (error()) {
+            <div class="error-message">
+              <span class="error-icon">⚠️</span>
+              {{ error() }}
+            </div>
+          }
+        </div>
+        
+        <div class="modal-footer">
+          <button 
+            class="btn btn-secondary" 
+            (click)="closeDownloadModal()"
+            [disabled]="downloading()"
+          >
+            Cancel
+          </button>
+          <button 
+            class="btn btn-primary"
+            (click)="downloadChapter()"
+            [disabled]="downloading() || !isValidPath(downloadSettings().savePath)"
+          >
+            @if (downloading()) {
+              <span class="spinner"></span>
+              Downloading...
+            } @else {
+              💾 Download Chapter
+            }
+          </button>
+        </div>
+      </div>
+    </div>
+  }
+</div>
