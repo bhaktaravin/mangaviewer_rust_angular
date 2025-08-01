@@ -1,6 +1,7 @@
 import { Component, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { Router } from '@angular/router';
 import { Apiservice, MangaSearchRequest } from '../apiservice';
 
 @Component({
@@ -18,7 +19,7 @@ export class MangaSearchComponent {
   hasMore = signal(false);
   currentPage = signal(1);
 
-  constructor(private apiService: Apiservice) {}
+  constructor(private apiService: Apiservice, private router: Router) {}
 
   async onSearch() {
     if (!this.searchQuery().trim()) {
@@ -122,5 +123,10 @@ export class MangaSearchComponent {
     if (event.key === 'Enter') {
       this.onSearch();
     }
+  }
+
+  showMangaDetails(manga: any) {
+    // Navigate to manga detail page
+    this.router.navigate(['/manga', manga.id], { state: { manga: manga } });
   }
 }
