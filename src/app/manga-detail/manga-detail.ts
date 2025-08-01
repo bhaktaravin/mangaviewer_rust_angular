@@ -1,6 +1,7 @@
-import { Component, signal, input, OnInit } from '@angular/core';
+import { Component, signal, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { ActivatedRoute, Router } from '@angular/router';
 import { Apiservice } from '../apiservice';
 
 interface Chapter {
@@ -45,7 +46,7 @@ declare global {
   styleUrl: './manga-detail.css'
 })
 export class MangaDetailComponent implements OnInit {
-  manga = input.required<any>();
+  manga = signal<any>(null);
   
   chapters = signal<Chapter[]>([]);
   loading = signal(false);
@@ -73,17 +74,45 @@ export class MangaDetailComponent implements OnInit {
   ];
   selectedCommonPath = signal<string>('');
 
-  constructor(private apiService: Apiservice) {}
+  constructor(
+    private apiService: Apiservice,
+    private route: ActivatedRoute,
+    private router: Router
+  ) {}
 
   ngOnInit() {
-    this.loadChapters();
-    this.downloadSettings.set({
-      ...this.downloadSettings(),
-      mangaTitle: this.manga().title || this.manga().name || 'Unknown'
-    });
-    
-    // Set default path
-    this.selectedCommonPath.set('/home/ravin/Downloads/manga');
+    // Get manga data from route state or load from API
+    const navigation = this.router.getCurrentNavigation();
+    if (navigation?.extras.state?.['manga']) {
+      this.manga.set(navigation.extras.state['manga']);
+      this.initializeManga();
+    } else {
+      // Fallback: try to get manga ID from route params and load from API
+      const mangaId = this.route.snapshot.paramMap.get('id');
+      if (mangaId) {
+        this.loadMangaById(mangaId);
+      }
+    }
+  }
+
+  private initializeManga() {
+    const mangaData = this.manga();
+    if (mangaData) {
+      this.loadChapters();
+      this.downloadSettings.set({
+        ...this.downloadSettings(),
+        mangaTitle: mangaData.title || mangaData.name || 'Unknown'
+      });
+      
+      // Set default path
+      this.selectedCommonPath.set('/home/ravin/Downloads/manga');
+    }
+  }
+
+  private loadMangaById(mangaId: string) {
+    // This would load manga details from API using the ID
+    // For now, redirect back to search if no manga data
+    this.router.navigate(['/search']);
   }
 
   async loadChapters() {

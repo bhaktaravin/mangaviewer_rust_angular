@@ -1,6 +1,7 @@
 import { Component, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { Router } from '@angular/router';
 import { Apiservice, MangaSearchRequest } from '../apiservice';
 import { DisclaimerComponent } from '../disclaimer/disclaimer.component';
 import { MangaDetailComponent } from '../manga-detail/manga-detail';
@@ -86,7 +87,7 @@ export class MangaSearchComponent {
     }
   ];
 
-  constructor(private apiService: Apiservice) {}
+  constructor(private apiService: Apiservice, private router: Router) {}
 
   async onSearch() {
     if (!this.searchQuery().trim()) {
@@ -211,8 +212,8 @@ export class MangaSearchComponent {
   }
 
   showMangaDetails(manga: any) {
-    this.selectedManga.set(manga);
-    this.showDetails.set(true);
+    // Navigate to manga detail page
+    this.router.navigate(['/manga', manga.id], { state: { manga: manga } });
   }
 
   hideMangaDetails() {
