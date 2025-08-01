@@ -222,4 +222,32 @@ export class Apiservice {
       headers: new HttpHeaders({ 'Content-Type': 'application/json' })
     });
   }
+
+  // Manga chapters endpoint
+  getMangaChapters(mangaId: string): Observable<any> {
+    return this.http.get(`${this.baseUrl}/api/manga/${mangaId}/chapters`, {
+      headers: this.getAuthHeaders()
+    });
+  }
+
+  // Download files endpoint
+  downloadFiles(
+    chapterId: string,
+    savePath: string,
+    mangaTitle: string,
+    chapterTitle: string,
+    quality: 'high' | 'saver'
+  ): Observable<any> {
+    const requestBody = {
+      chapter_id: chapterId,
+      save_path: savePath,
+      manga_title: mangaTitle,
+      chapter_title: chapterTitle,
+      quality: quality
+    };
+
+    return this.http.post(`${this.baseUrl}/api/download-files`, requestBody, {
+      headers: this.getAuthHeaders()
+    });
+  }
 }
