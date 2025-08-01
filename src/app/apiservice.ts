@@ -47,8 +47,14 @@ export class Apiservice {
   constructor(private http: HttpClient) { }
 
   private getBaseUrl(): string {
-    // Always use production backend on fly.io
+    // Use localhost for development when available
+    if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+      return 'http://localhost:3000';
+    }
     return 'https://api-nameless-haze-4648.fly.dev';
+    
+    // Always use production backend on fly.io
+    // return 'https://api-nameless-haze-4648.fly.dev';
     
     // Uncomment below to use localhost for development:
     // if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
@@ -191,6 +197,34 @@ export class Apiservice {
   healthCheck(): Observable<any> {
     return this.http.get(`${this.baseUrl}`, {
       headers: new HttpHeaders({ 'Content-Type': 'application/json' })
+    });
+  }
+
+  // Manga chapters endpoint
+  getMangaChapters(mangaId: string): Observable<any> {
+    return this.http.get(`${this.baseUrl}/api/manga/${mangaId}/chapters`, {
+      headers: this.getAuthHeaders()
+    });
+  }
+
+  // Download files endpoint
+  downloadFiles(
+    chapterId: string,
+    savePath: string,
+    mangaTitle: string,
+    chapterTitle: string,
+    quality: 'high' | 'saver'
+  ): Observable<any> {
+    const requestBody = {
+      chapter_id: chapterId,
+      save_path: savePath,
+      manga_title: mangaTitle,
+      chapter_title: chapterTitle,
+      quality: quality
+    };
+
+    return this.http.post(`${this.baseUrl}/api/download-files`, requestBody, {
+      headers: this.getAuthHeaders()
     });
   }
 }
