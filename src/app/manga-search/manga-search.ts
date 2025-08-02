@@ -87,6 +87,7 @@ export class MangaSearchComponent {
     }
   ];
 
+
   constructor(private apiService: Apiservice, private router: Router) {}
 
   async onSearch() {
@@ -215,6 +216,7 @@ export class MangaSearchComponent {
     // Navigate to manga detail page
     this.router.navigate(['/manga', manga.id], { state: { manga: manga } });
   }
+
 
   hideMangaDetails() {
     this.showDetails.set(false);
