@@ -214,9 +214,11 @@ export class MangaSearchComponent {
   }
 
   showMangaDetails(manga: any) {
+    console.log('showMangaDetails called with:', manga);
     // Set manga for modal display
     this.selectedManga.set(manga);
     this.showDetails.set(true);
+    console.log('Modal state - showDetails:', this.showDetails(), 'selectedManga:', this.selectedManga());
   }
 
 
