@@ -169,4 +169,22 @@
       </div>
     </div>
   }
+  
+  <!-- Disclaimer for manga content attribution -->
+  <app-disclaimer></app-disclaimer>
+
+  <!-- Manga Detail Modal -->
+  @if (showDetails() && selectedManga()) {
+    <div class="detail-modal-overlay" (click)="hideMangaDetails()">
+      <div class="detail-modal-content" (click)="$event.stopPropagation()">
+        <div class="detail-modal-header">
+          <h3>📖 Manga Details</h3>
+          <button class="detail-modal-close" (click)="hideMangaDetails()">×</button>
+        </div>
+        <div class="detail-modal-body">
+          <app-manga-detail [manga]="selectedManga()"></app-manga-detail>
+        </div>
+      </div>
+    </div>
+  }
 </div>

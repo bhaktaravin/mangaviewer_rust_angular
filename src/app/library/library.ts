@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { Apiservice } from '../apiservice';
 import { AuthService } from '../auth.service';
+import { DisclaimerComponent } from '../disclaimer/disclaimer.component';
 
 export interface MangaLibraryItem {
   id: string;
@@ -40,7 +41,7 @@ export interface LibraryStats {
 @Component({
   selector: 'app-library',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, DisclaimerComponent],
   templateUrl: './library.html',
   styleUrls: ['./library.css']
 })

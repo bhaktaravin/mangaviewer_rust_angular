@@ -144,3 +144,46 @@ body {
   color: #0c5460;
   border: 1px solid #bee5eb;
 }
+
+/* Footer disclaimer styles */
+.app-footer {
+  background: var(--bg-secondary);
+  border-top: 1px solid var(--border-color);
+  padding: 1rem 0;
+  margin-top: 2rem;
+}
+
+.footer-content {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 1rem;
+}
+
+.footer-disclaimer {
+  text-align: center;
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  margin: 0;
+  line-height: 1.4;
+}
+
+.footer-disclaimer strong {
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
+.footer-disclaimer a {
+  color: var(--brand-primary);
+  text-decoration: none;
+  font-weight: 500;
+}
+
+.footer-disclaimer a:hover {
+  text-decoration: underline;
+}
+
+/* Adjust main content to account for footer */
+.main-content {
+  min-height: calc(100vh - 140px); /* Navbar + Footer */
+  padding-bottom: 1rem;
+}
