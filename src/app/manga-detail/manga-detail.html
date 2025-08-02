@@ -63,9 +63,28 @@
   <!-- Chapters Section -->
   <div class="chapters-section" *ngIf="manga()">
     <div class="section-header">
-      <h2>📖 Chapters</h2>
-      @if (chapters().length > 0) {
-        <span class="chapter-count">{{ chapters().length }} chapters available</span>
+      <div class="header-content">
+        <h2>📖 Chapters</h2>
+        @if (chapters().length > 0) {
+          <span class="chapter-count">{{ chapters().length }} chapters available</span>
+        }
+      </div>
+      
+      @if (isAuthenticated() && chapters().length > 0) {
+        <div class="bulk-actions">
+          <button 
+            class="btn btn-primary btn-bulk-download"
+            (click)="openBulkDownloadModal()"
+            [disabled]="bulkDownloading()"
+          >
+            @if (bulkDownloading()) {
+              <span class="spinner"></span>
+              Downloading...
+            } @else {
+              📦 Download All Chapters
+            }
+          </button>
+        </div>
       }
     </div>
 
@@ -271,6 +290,136 @@
               💾 Download Chapter
             }
           </button>
+        </div>
+      </div>
+    </div>
+  }
+
+  <!-- Bulk Download Modal -->
+  @if (showBulkDownloadModal()) {
+    <div class="modal-overlay" (click)="closeBulkDownloadModal()">
+      <div class="modal-content bulk-download-modal" (click)="$event.stopPropagation()">
+        <div class="modal-header">
+          <h3>📦 Download All Chapters</h3>
+          <button class="modal-close" (click)="closeBulkDownloadModal()" [disabled]="bulkDownloading()">×</button>
+        </div>
+        
+        <div class="modal-body">
+          @if (!bulkDownloading() && !bulkDownloadProgress()) {
+            <div class="bulk-download-info">
+              <p>This will download all <strong>{{ chapters().length }}</strong> chapters of <strong>{{ manga().title }}</strong>.</p>
+              
+              <div class="download-settings-summary">
+                <div class="setting-item">
+                  <strong>📁 Save Path:</strong> {{ downloadSettings().savePath }}
+                </div>
+                <div class="setting-item">
+                  <strong>🎨 Quality:</strong> {{ formatFileSize(downloadSettings().quality) }}
+                </div>
+                <div class="setting-item">
+                  <strong>⚠️ Authentication:</strong> 
+                  @if (isAuthenticated()) {
+                    <span class="auth-status authenticated">✅ Authenticated</span>
+                  } @else {
+                    <span class="auth-status not-authenticated">❌ Not Authenticated</span>
+                  }
+                </div>
+              </div>
+
+              <div class="bulk-warning">
+                <p><strong>⚠️ Please note:</strong></p>
+                <ul>
+                  <li>This may take several minutes depending on the number of chapters</li>
+                  <li>Ensure you have sufficient disk space</li>
+                  <li>Do not close this window during the download process</li>
+                </ul>
+              </div>
+            </div>
+          }
+
+          @if (bulkDownloading() || bulkDownloadProgress()) {
+            <div class="bulk-progress">
+              @if (bulkDownloading()) {
+                <div class="progress-header">
+                  <h4>Downloading chapters... {{ getBulkDownloadProgress() }}</h4>
+                  <div class="progress-bar">
+                    <div 
+                      class="progress-fill" 
+                      [style.width.%]="bulkDownloadProgress() ? (bulkDownloadProgress()!.current / bulkDownloadProgress()!.total) * 100 : 0"
+                    ></div>
+                  </div>
+                </div>
+
+                @if (bulkDownloadProgress()) {
+                  <div class="current-chapter">
+                    <p><strong>Currently downloading:</strong> {{ bulkDownloadProgress()!.currentChapter }}</p>
+                  </div>
+
+                  <div class="progress-stats">
+                    <div class="stat completed">
+                      <span class="stat-icon">✅</span>
+                      <span>Completed: {{ bulkDownloadProgress()!.completed.length }}</span>
+                    </div>
+                    @if (bulkDownloadProgress()!.failed.length > 0) {
+                      <div class="stat failed">
+                        <span class="stat-icon">❌</span>
+                        <span>Failed: {{ bulkDownloadProgress()!.failed.length }}</span>
+                      </div>
+                    }
+                  </div>
+                }
+              }
+
+              @if (!bulkDownloading() && bulkDownloadProgress()) {
+                <div class="download-complete">
+                  <h4>{{ getBulkDownloadSummary() }}</h4>
+                  
+                  @if (bulkDownloadProgress()!.failed.length > 0) {
+                    <div class="failed-chapters">
+                      <p><strong>Failed chapters:</strong></p>
+                      <ul>
+                        @for (failedId of bulkDownloadProgress()!.failed; track failedId) {
+                          <li>{{ failedId }}</li>
+                        }
+                      </ul>
+                    </div>
+                  }
+                </div>
+              }
+            </div>
+          }
+
+          @if (error()) {
+            <div class="error-message">
+              <span class="error-icon">⚠️</span>
+              {{ error() }}
+            </div>
+          }
+        </div>
+        
+        <div class="modal-footer">
+          @if (!bulkDownloading()) {
+            <button 
+              class="btn btn-secondary" 
+              (click)="closeBulkDownloadModal()"
+            >
+              @if (bulkDownloadProgress()) {
+                Close
+              } @else {
+                Cancel
+              }
+            </button>
+            
+            @if (!bulkDownloadProgress() && isAuthenticated()) {
+              <button 
+                class="btn btn-primary" 
+                (click)="downloadAllChapters()"
+                [disabled]="!isValidPath(downloadSettings().savePath)"
+              >
+                🚀 Start Bulk Download
+              </button>
+            }
+          }
         </div>
       </div>
     </div>

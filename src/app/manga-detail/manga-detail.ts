@@ -70,22 +70,27 @@ export class MangaDetailComponent implements OnInit {
   showDownloadModal = signal(false);
   selectedChapter = signal<Chapter | null>(null);
   downloadSettings = signal<DownloadSettings>({
-    savePath: '/home/ravin/Downloads/manga',
+    savePath: this.getDefaultDownloadPath(),
     quality: 'high',
     mangaTitle: ''
   });
   downloadProgress = signal<any>(null);
   downloading = signal(false);
   
+  // Bulk download functionality
+  showBulkDownloadModal = signal(false);
+  bulkDownloading = signal(false);
+  bulkDownloadProgress = signal<{
+    current: number;
+    total: number;
+    currentChapter: string;
+    completed: string[];
+    failed: string[];
+  } | null>(null);
+  isAuthenticated = signal(false); // This should be set based on actual auth state
+  
   // Common download paths for quick selection
-  commonPaths = [
-    { label: '🏠 Home/Downloads', path: '/home/ravin/Downloads/manga' },
-    { label: '💻 Desktop', path: '/home/ravin/Desktop/manga' },
-    { label: '📁 Documents', path: '/home/ravin/Documents/manga' },
-    { label: '📚 Manga Library', path: '/home/ravin/manga_library' },
-    { label: '⬇️ Temporary Downloads', path: '/tmp/manga_downloads' },
-    { label: '✏️ Custom Location', path: 'custom' }
-  ];
+  commonPaths = this.getCommonPaths();
   selectedCommonPath = signal<string>('');
 
   constructor(
@@ -93,6 +98,24 @@ export class MangaDetailComponent implements OnInit {
     private route: ActivatedRoute,
     private router: Router
   ) {}
+
+  private getDefaultDownloadPath(): string {
+    // Use a simple, universal default that works across platforms
+    return './Downloads/manga';
+  }
+
+  private getCommonPaths() {
+    // Provide generic, user-friendly path options that work across platforms
+    return [
+      { label: '🏠 Downloads Folder', path: './Downloads/manga' },
+      { label: '💻 Desktop', path: './Desktop/manga' },
+      { label: '📁 Documents', path: './Documents/manga' },
+      { label: '📚 Current Directory', path: './manga' },
+      { label: '� Manga Folder', path: './manga_library' },
+      { label: '⬇️ Temp Downloads', path: './temp/manga' },
+      { label: '✏️ Custom Location', path: 'custom' }
+    ];
+  }
 
   ngOnInit() {
     // Check if manga was passed as input (from modal)
@@ -113,6 +136,10 @@ export class MangaDetailComponent implements OnInit {
         this.loadMangaById(mangaId);
       }
     }
+    
+    // TODO: Set authentication status based on actual auth service
+    // For demo purposes, set to true. In real app, check with auth service
+    this.isAuthenticated.set(true);
   }
 
   private initializeManga() {
@@ -124,8 +151,8 @@ export class MangaDetailComponent implements OnInit {
         mangaTitle: mangaData.title || mangaData.name || 'Unknown'
       });
       
-      // Set default path
-      this.selectedCommonPath.set('/home/ravin/Downloads/manga');
+      // Set default path based on platform
+      this.selectedCommonPath.set('./Downloads/manga');
     }
   }
 
@@ -349,5 +376,122 @@ export class MangaDetailComponent implements OnInit {
   // Track chapters for *ngFor performance
   chapterTracker(index: number, chapter: Chapter): string {
     return chapter.id;
+  }
+
+  // Bulk download functionality
+  openBulkDownloadModal() {
+    this.showBulkDownloadModal.set(true);
+    this.bulkDownloadProgress.set(null);
+  }
+
+  closeBulkDownloadModal() {
+    this.showBulkDownloadModal.set(false);
+    this.bulkDownloadProgress.set(null);
+    this.bulkDownloading.set(false);
+  }
+
+  async downloadAllChapters() {
+    if (!this.isAuthenticated()) {
+      this.error.set('Authentication required for bulk downloads');
+      return;
+    }
+
+    const chapters = this.chapters();
+    const settings = this.downloadSettings();
+    
+    if (!chapters.length || !this.isValidPath(settings.savePath)) {
+      this.error.set('Please provide a valid save path and ensure chapters are loaded');
+      return;
+    }
+
+    this.bulkDownloading.set(true);
+    this.error.set('');
+    
+    const progress = {
+      current: 0,
+      total: chapters.length,
+      currentChapter: '',
+      completed: [] as string[],
+      failed: [] as string[]
+    };
+
+    try {
+      for (let i = 0; i < chapters.length; i++) {
+        const chapter = chapters[i];
+        progress.current = i + 1;
+        progress.currentChapter = this.getChapterTitle(chapter);
+        this.bulkDownloadProgress.set({ ...progress });
+
+        try {
+          await this.downloadSingleChapter(chapter, settings);
+          progress.completed.push(chapter.id);
+        } catch (error) {
+          console.error(`Failed to download ${chapter.id}:`, error);
+          progress.failed.push(chapter.id);
+        }
+
+        // Add small delay between downloads to avoid overwhelming the server
+        await new Promise(resolve => setTimeout(resolve, 500));
+      }
+
+      // Final progress update
+      this.bulkDownloadProgress.set({ ...progress });
+      
+      if (progress.failed.length === 0) {
+        this.error.set('');
+      } else {
+        this.error.set(`${progress.failed.length} chapters failed to download`);
+      }
+    } catch (error) {
+      console.error('Bulk download error:', error);
+      this.error.set('Bulk download failed');
+    } finally {
+      this.bulkDownloading.set(false);
+    }
+  }
+
+  private async downloadSingleChapter(chapter: Chapter, settings: DownloadSettings): Promise<void> {
+    const chapterTitle = chapter.attributes.title || `Chapter_${chapter.attributes.chapter}`;
+    
+    // Check if this is a demo chapter
+    if (chapter.id.includes('demo-')) {
+      // Simulate download for demo
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      return;
+    }
+    
+    // Real API call for actual chapters
+    const response = await this.apiService.downloadFiles(
+      chapter.id,
+      settings.savePath,
+      settings.mangaTitle,
+      chapterTitle,
+      settings.quality
+    ).toPromise();
+
+    if (!response || !response.success) {
+      throw new Error(response?.error || 'Download failed');
+    }
+  }
+
+  getBulkDownloadProgress(): string {
+    const progress = this.bulkDownloadProgress();
+    if (!progress) return '';
+    
+    return `${progress.current}/${progress.total} chapters`;
+  }
+
+  getBulkDownloadSummary(): string {
+    const progress = this.bulkDownloadProgress();
+    if (!progress || progress.current < progress.total) return '';
+    
+    const completed = progress.completed.length;
+    const failed = progress.failed.length;
+    
+    if (failed === 0) {
+      return `✅ Successfully downloaded all ${completed} chapters!`;
+    } else {
+      return `⚠️ Downloaded ${completed} chapters, ${failed} failed`;
+    }
   }
 }
