@@ -1,0 +1,190 @@
+<div class="manga-search-container">
+  <div class="search-header">
+    <h2>🔍 Search Manga</h2>
+    <p>Discover your next favorite manga with AI-powered search</p>
+  </div>
+
+  <div class="search-section">
+    <div class="search-bar">
+      <input
+        type="text"
+        [ngModel]="searchQuery()"
+        (ngModelChange)="searchQuery.set($event)"
+        (keydown)="onEnterKey($event)"
+        placeholder="Search for manga titles, authors, or genres..."
+        class="search-input"
+        [disabled]="loading()"
+      />
+      <div class="search-buttons">
+        <button
+          class="btn btn-primary"
+          (click)="onSearch()"
+          [disabled]="loading() || !searchQuery().trim()"
+        >
+          @if (loading()) {
+            <span class="spinner"></span>
+            Searching...
+          } @else {
+            🔍 Search
+          }
+        </button>
+        @if (searchQuery() || searchResults().length > 0) {
+          <button
+            class="btn btn-secondary"
+            (click)="clearSearch()"
+            [disabled]="loading()"
+          >
+            Clear
+          </button>
+        }
+      </div>
+    </div>
+
+    @if (error()) {
+      <div class="error-message">
+        <span class="error-icon">⚠️</span>
+        {{ error() }}
+      </div>
+    }
+  </div>
+
+  @if (searchResults().length > 0) {
+    <div class="results-section">
+      <div class="results-header">
+        <h3>Search Results</h3>
+        <span class="results-count">{{ searchResults().length }} results found</span>
+      </div>
+
+      <div class="manga-grid">
+        @for (manga of searchResults(); track $index) {
+          <div class="manga-card">
+            @if (manga.cover_image || manga.thumbnail) {
+              <div class="manga-image">
+                <img 
+                  [src]="manga.cover_image || manga.thumbnail" 
+                  [alt]="manga.title || manga.name"
+                  loading="lazy"
+                  onerror="this.src='https://via.placeholder.com/150x200?text=No+Image'"
+                />
+              </div>
+            } @else {
+              <div class="manga-image placeholder">
+                <span class="placeholder-text">📚</span>
+              </div>
+            }
+            
+            <div class="manga-info">
+              <h4 class="manga-title">{{ manga.title || manga.name || 'Unknown Title' }}</h4>
+              
+              @if (manga.author || manga.authors) {
+                <p class="manga-author">
+                  <span class="label">Author:</span>
+                  {{ manga.author || manga.authors }}
+                </p>
+              }
+              
+              @if (manga.genre || manga.genres) {
+                <p class="manga-genre">
+                  <span class="label">Genre:</span>
+                  {{ manga.genre || manga.genres }}
+                </p>
+              }
+              
+              @if (manga.description) {
+                <p class="manga-description">
+                  {{ manga.description.length > 100 ? (manga.description | slice:0:100) + '...' : manga.description }}
+                </p>
+              }
+              
+              @if (manga.rating || manga.score) {
+                <div class="manga-rating">
+                  <span class="rating-label">Rating:</span>
+                  <span class="rating-value">{{ manga.rating || manga.score }}/10</span>
+                </div>
+              }
+              
+              <div class="manga-actions">
+                <button 
+                  class="btn btn-primary btn-small"
+                  (click)="showMangaDetails(manga)"
+                >
+                  📖 View Details & Download
+                </button>
+                <button class="btn btn-outline btn-small">
+                  ⭐ Add to Favorites
+                </button>
+              </div>
+            </div>
+          </div>
+        }
+      </div>
+
+      @if (hasMore()) {
+        <div class="load-more-section">
+          <button
+            class="btn btn-secondary btn-large"
+            (click)="loadMore()"
+            [disabled]="loading()"
+          >
+            @if (loading()) {
+              <span class="spinner"></span>
+              Loading more...
+            } @else {
+              Load More Results
+            }
+          </button>
+        </div>
+      }
+    </div>
+  }
+
+  @if (!loading() && searchQuery() && searchResults().length === 0 && !error()) {
+    <div class="no-results">
+      <div class="no-results-icon">🔍</div>
+      <h3>No results found</h3>
+      <p>Try different keywords or check your spelling</p>
+    </div>
+  }
+
+  @if (!searchQuery() && searchResults().length === 0) {
+    <div class="search-suggestions">
+      <h3>💡 Search Tips</h3>
+      <div class="tips-grid">
+        <div class="tip-card">
+          <span class="tip-icon">📝</span>
+          <p>Try searching by manga title</p>
+        </div>
+        <div class="tip-card">
+          <span class="tip-icon">👤</span>
+          <p>Search by author name</p>
+        </div>
+        <div class="tip-card">
+          <span class="tip-icon">🏷️</span>
+          <p>Browse by genre</p>
+        </div>
+        <div class="tip-card">
+          <span class="tip-icon">🤖</span>
+          <p>Use AI-powered recommendations</p>
+        </div>
+      </div>
+    </div>
+  }
+  
+  <!-- Disclaimer for manga content attribution -->
+  <app-disclaimer></app-disclaimer>
+
+  <!-- Manga Detail Modal -->
+  @if (showDetails() && selectedManga()) {
+    <div class="detail-modal-overlay" (click)="hideMangaDetails()">
+      <div class="detail-modal-content" (click)="$event.stopPropagation()">
+        <div class="detail-modal-header">
+          <h3>📖 Manga Details</h3>
+          <button class="detail-modal-close" (click)="hideMangaDetails()">×</button>
+        </div>
+        <div class="detail-modal-body">
+          <app-manga-detail [manga]="selectedManga()"></app-manga-detail>
+        </div>
+      </div>
+    </div>
+  }
+</div>

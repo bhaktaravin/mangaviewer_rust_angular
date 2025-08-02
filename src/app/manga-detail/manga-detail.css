@@ -1,0 +1,542 @@
+.manga-detail-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 20px;
+}
+
+/* Manga Header */
+.manga-header {
+  display: flex;
+  gap: 30px;
+  margin-bottom: 40px;
+  background: var(--surface-color, #fff);
+  border-radius: 12px;
+  padding: 30px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.manga-cover img {
+  width: 200px;
+  height: 300px;
+  object-fit: cover;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+.placeholder-cover {
+  width: 200px;
+  height: 300px;
+  background: var(--border-color, #e5e7eb);
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 4rem;
+}
+
+.manga-info {
+  flex: 1;
+}
+
+.manga-title {
+  font-size: 2.5rem;
+  font-weight: bold;
+  margin-bottom: 15px;
+  color: var(--primary-color, #3b82f6);
+}
+
+.manga-author,
+.manga-status {
+  margin-bottom: 10px;
+  font-size: 1.1rem;
+}
+
+.status-badge {
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.status-badge.completed {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.status-badge.ongoing {
+  background: #dbeafe;
+  color: #1d4ed8;
+}
+
+.manga-description {
+  margin: 20px 0;
+  line-height: 1.6;
+  color: var(--text-secondary, #6b7280);
+  font-size: 1.1rem;
+}
+
+.manga-tags {
+  margin-top: 20px;
+}
+
+.tags-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.tag {
+  background: var(--accent-color, #f3f4f6);
+  color: var(--accent-text, #374151);
+  padding: 6px 12px;
+  border-radius: 20px;
+  font-size: 0.9rem;
+  font-weight: 500;
+}
+
+/* Chapters Section */
+.chapters-section {
+  background: var(--surface-color, #fff);
+  border-radius: 12px;
+  padding: 30px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 25px;
+  padding-bottom: 15px;
+  border-bottom: 2px solid var(--border-color, #e5e7eb);
+}
+
+.section-header h2 {
+  font-size: 1.8rem;
+  font-weight: bold;
+  color: var(--primary-color, #3b82f6);
+}
+
+.chapter-count {
+  color: var(--text-secondary, #6b7280);
+  font-weight: 500;
+}
+
+.loading-state {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 40px;
+  color: var(--text-secondary, #6b7280);
+}
+
+.chapters-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.chapter-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px;
+  background: var(--background-color, #f9fafb);
+  border-radius: 8px;
+  border: 1px solid var(--border-color, #e5e7eb);
+  transition: all 0.2s ease;
+}
+
+.chapter-item:hover {
+  background: var(--accent-color, #f3f4f6);
+  border-color: var(--primary-color, #3b82f6);
+  transform: translateY(-1px);
+}
+
+.chapter-info {
+  flex: 1;
+}
+
+.chapter-title {
+  font-size: 1.2rem;
+  font-weight: 600;
+  margin-bottom: 8px;
+  color: var(--text-primary, #111827);
+}
+
+.chapter-meta {
+  display: flex;
+  gap: 15px;
+  font-size: 0.9rem;
+  color: var(--text-secondary, #6b7280);
+}
+
+.chapter-meta span {
+  background: var(--surface-color, #fff);
+  padding: 4px 8px;
+  border-radius: 4px;
+  border: 1px solid var(--border-color, #e5e7eb);
+}
+
+.chapter-actions {
+  display: flex;
+  gap: 10px;
+}
+
+/* Modal Styles */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 20px;
+}
+
+.modal-content {
+  background: var(--surface-color, #fff);
+  border-radius: 12px;
+  width: 100%;
+  max-width: 600px;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 25px 30px;
+  border-bottom: 1px solid var(--border-color, #e5e7eb);
+}
+
+.modal-header h3 {
+  font-size: 1.5rem;
+  font-weight: bold;
+  color: var(--primary-color, #3b82f6);
+}
+
+.modal-close {
+  background: none;
+  border: none;
+  font-size: 2rem;
+  cursor: pointer;
+  color: var(--text-secondary, #6b7280);
+  padding: 0;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  transition: all 0.2s ease;
+}
+
+.modal-close:hover {
+  background: var(--accent-color, #f3f4f6);
+  color: var(--text-primary, #111827);
+}
+
+.modal-body {
+  padding: 30px;
+}
+
+.download-info {
+  background: var(--accent-color, #f3f4f6);
+  padding: 20px;
+  border-radius: 8px;
+  margin-bottom: 25px;
+}
+
+.download-info h4 {
+  font-size: 1.3rem;
+  font-weight: 600;
+  margin-bottom: 5px;
+  color: var(--primary-color, #3b82f6);
+}
+
+.download-settings {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.setting-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.setting-group label {
+  font-weight: 600;
+  color: var(--text-primary, #111827);
+}
+
+.setting-input,
+.setting-select {
+  padding: 12px 16px;
+  border: 2px solid var(--border-color, #e5e7eb);
+  border-radius: 8px;
+  font-size: 1rem;
+  transition: border-color 0.2s ease;
+}
+
+.setting-input:focus,
+.setting-select:focus {
+  outline: none;
+  border-color: var(--primary-color, #3b82f6);
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.setting-input.invalid {
+  border-color: var(--error-color, #ef4444);
+  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.1);
+}
+
+.path-input-group {
+  display: flex;
+  gap: 8px;
+  align-items: stretch;
+}
+
+.path-input {
+  flex: 1;
+}
+
+.browse-btn {
+  white-space: nowrap;
+  min-width: auto;
+  padding: 8px 12px;
+}
+
+.error-text {
+  color: var(--error-color, #ef4444);
+  font-weight: 600;
+}
+
+.path-preview {
+  background: var(--accent-color, #f3f4f6);
+  padding: 12px;
+  border-radius: 6px;
+  border: 1px solid var(--border-color, #e5e7eb);
+  margin-top: 8px;
+}
+
+.save-path-display {
+  background: var(--surface-color, #fff);
+  padding: 8px 12px;
+  border-radius: 4px;
+  border: 1px solid var(--border-color, #e5e7eb);
+  font-family: 'Courier New', monospace;
+  font-size: 0.9rem;
+  color: var(--primary-color, #3b82f6);
+  word-break: break-all;
+  display: block;
+  margin-top: 6px;
+}
+
+.setting-help {
+  color: var(--text-secondary, #6b7280);
+  font-size: 0.9rem;
+}
+
+.download-result {
+  margin-top: 20px;
+  padding: 20px;
+  background: var(--success-bg, #dcfce7);
+  border-radius: 8px;
+  border: 1px solid var(--success-border, #bbf7d0);
+}
+
+.success-message {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 15px;
+}
+
+.success-icon {
+  font-size: 1.2rem;
+}
+
+.download-details p {
+  margin-bottom: 8px;
+}
+
+.failed-downloads {
+  margin-top: 15px;
+  padding: 15px;
+  background: var(--error-bg, #fef2f2);
+  border-radius: 6px;
+  border: 1px solid var(--error-border, #fecaca);
+}
+
+.failed-downloads ul {
+  margin: 10px 0 0 20px;
+}
+
+.modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 15px;
+  padding: 25px 30px;
+  border-top: 1px solid var(--border-color, #e5e7eb);
+  background: var(--accent-color, #f9fafb);
+  border-radius: 0 0 12px 12px;
+}
+
+/* Button Styles */
+.btn {
+  padding: 10px 20px;
+  border: none;
+  border-radius: 6px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  text-decoration: none;
+  font-size: 0.95rem;
+}
+
+.btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.btn-small {
+  padding: 8px 16px;
+  font-size: 0.9rem;
+}
+
+.btn-primary {
+  background: var(--primary-color, #3b82f6);
+  color: white;
+}
+
+.btn-primary:hover:not(:disabled) {
+  background: var(--primary-hover, #2563eb);
+  transform: translateY(-1px);
+}
+
+.btn-secondary {
+  background: var(--border-color, #e5e7eb);
+  color: var(--text-primary, #111827);
+}
+
+.btn-secondary:hover:not(:disabled) {
+  background: var(--accent-color, #f3f4f6);
+}
+
+.btn-outline {
+  background: transparent;
+  border: 2px solid var(--border-color, #e5e7eb);
+  color: var(--text-primary, #111827);
+}
+
+.btn-outline:hover:not(:disabled) {
+  border-color: var(--primary-color, #3b82f6);
+  color: var(--primary-color, #3b82f6);
+}
+
+/* Spinner */
+.spinner {
+  width: 16px;
+  height: 16px;
+  border: 2px solid transparent;
+  border-top: 2px solid currentColor;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* Error Message */
+.error-message {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 15px;
+  background: var(--error-bg, #fef2f2);
+  border: 1px solid var(--error-border, #fecaca);
+  border-radius: 8px;
+  color: var(--error-text, #dc2626);
+  margin: 15px 0;
+}
+
+.error-icon {
+  font-size: 1.2rem;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .manga-detail-container {
+    padding: 15px;
+  }
+
+  .manga-header {
+    flex-direction: column;
+    text-align: center;
+    gap: 20px;
+    padding: 20px;
+  }
+
+  .manga-cover img,
+  .placeholder-cover {
+    width: 150px;
+    height: 225px;
+    margin: 0 auto;
+  }
+
+  .manga-title {
+    font-size: 2rem;
+  }
+
+  .chapter-item {
+    flex-direction: column;
+    gap: 15px;
+    text-align: center;
+  }
+
+  .chapter-actions {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .modal-content {
+    margin: 10px;
+    max-height: 95vh;
+  }
+
+  .modal-header,
+  .modal-body,
+  .modal-footer {
+    padding: 20px;
+  }
+
+  .modal-footer {
+    flex-direction: column;
+  }
+
+  .path-input-group {
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .browse-btn {
+    width: 100%;
+    justify-content: center;
+  }
+}
