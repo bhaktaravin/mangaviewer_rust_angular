@@ -164,7 +164,8 @@
                     >
                       {{ manga.is_favorite ? '❤️' : '🤍' }}
                     </button>
-                    <button class="quick-btn" (click)="openEditModal(manga)">✏️</button>
+                    <button class="quick-btn read-btn" (click)="readManga(manga.id)" title="Read Manga">📖</button>
+                    <button class="quick-btn" (click)="openEditModal(manga)" title="Edit">✏️</button>
                   </div>
 
                   <!-- Status Badge -->
@@ -290,8 +291,9 @@
                     >
                       {{ manga.is_favorite ? '❤️' : '🤍' }}
                     </button>
-                    <button class="action-btn" (click)="openEditModal(manga)">✏️</button>
-                    <button class="action-btn danger" (click)="deleteManga(manga.id)">🗑️</button>
+                    <button class="action-btn read-btn" (click)="readManga(manga.id)" title="Read Manga">📖</button>
+                    <button class="action-btn" (click)="openEditModal(manga)" title="Edit">✏️</button>
+                    <button class="action-btn danger" (click)="deleteManga(manga.id)" title="Delete">🗑️</button>
                   </div>
                 </div>
               </div>

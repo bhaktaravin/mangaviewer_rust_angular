@@ -106,9 +106,15 @@
               <div class="manga-actions">
                 <button 
                   class="btn btn-primary btn-small"
+                  (click)="readManga(manga.id)"
+                >
+                  📖 Read Now
+                </button>
+                <button 
+                  class="btn btn-secondary btn-small"
                   (click)="showMangaDetails(manga)"
                 >
-                  📖 View Details & Download
+                  ℹ️ Details
                 </button>
                 <button class="btn btn-outline btn-small">
                   ⭐ Add to Favorites

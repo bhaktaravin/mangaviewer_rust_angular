@@ -97,6 +97,8 @@ export class MangaSearchComponent {
       return;
     }
 
+    console.log('Searching for:', `"${this.searchQuery()}"`, 'Trimmed:', `"${this.searchQuery().trim()}"`);
+
     this.loading.set(true);
     this.error.set('');
     this.currentPage.set(1);
@@ -153,12 +155,26 @@ export class MangaSearchComponent {
 
   private fallbackToDemoSearch() {
     const query = this.searchQuery().toLowerCase().trim();
-    const filteredManga = this.demoManga.filter(manga => 
-      manga.title.toLowerCase().includes(query) ||
-      manga.description.toLowerCase().includes(query) ||
-      manga.tags.some(tag => tag.toLowerCase().includes(query)) ||
-      manga.author.toLowerCase().includes(query)
-    );
+    console.log('Demo search query:', `"${query}"`);
+    
+    const filteredManga = this.demoManga.filter(manga => {
+      const titleMatch = manga.title.toLowerCase().includes(query);
+      const descMatch = manga.description.toLowerCase().includes(query);
+      const tagMatch = manga.tags.some(tag => tag.toLowerCase().includes(query));
+      const authorMatch = manga.author.toLowerCase().includes(query);
+      
+      console.log(`Checking "${manga.title}":`, {
+        titleMatch,
+        descMatch, 
+        tagMatch,
+        authorMatch,
+        overall: titleMatch || descMatch || tagMatch || authorMatch
+      });
+      
+      return titleMatch || descMatch || tagMatch || authorMatch;
+    });
+
+    console.log('Filtered results:', filteredManga.length, filteredManga.map(m => m.title));
 
     if (filteredManga.length > 0) {
       this.searchResults.set(filteredManga);
@@ -219,6 +235,10 @@ export class MangaSearchComponent {
     this.selectedManga.set(manga);
     this.showDetails.set(true);
     console.log('Modal state - showDetails:', this.showDetails(), 'selectedManga:', this.selectedManga());
+  }
+
+  readManga(mangaId: string) {
+    this.router.navigate(['/read', mangaId]);
   }
 
 

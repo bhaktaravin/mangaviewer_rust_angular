@@ -195,6 +195,26 @@ export class LibraryComponent implements OnInit {
     this.isDemoMode.set(true);
     const demoLibrary: MangaLibraryItem[] = [
       {
+        id: 'demo-2',
+        title: 'Naruto (Demo)',
+        author: 'Masashi Kishimoto',
+        description: 'The story of Uzumaki Naruto and his journey to become Hokage. Demo version with sample reading pages.',
+        cover_url: 'https://m.media-amazon.com/images/M/MV5BZmQ5NGFiNWEtMmMyMC00MDdiLWI4YWQtZTg0YmNhNTljNDFkXkEyXkFqcGdeQXVyNTA4NzY1MzY@._V1_.jpg',
+        status: 'reading',
+        progress: {
+          current_chapter: 1,
+          total_chapters: 700,
+          current_volume: 1,
+          total_volumes: 72
+        },
+        rating: 5,
+        tags: ['Action', 'Adventure', 'Shounen'],
+        is_favorite: true,
+        date_added: '2023-01-01T10:00:00Z',
+        date_updated: '2024-07-29T14:30:00Z',
+        notes: 'Classic ninja manga! Demo version includes sample pages for testing the reader.'
+      },
+      {
         id: '1',
         title: 'One Piece',
         author: 'Eiichiro Oda',
@@ -726,5 +746,10 @@ export class LibraryComponent implements OnInit {
     // This method is called by the form but actual updates happen in real-time
     // through the individual update methods above
     this.closeEditModal();
+  }
+
+  // Navigate to manga reader
+  readManga(mangaId: string) {
+    this.router.navigate(['/read', mangaId]);
   }
 }

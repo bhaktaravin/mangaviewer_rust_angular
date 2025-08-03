@@ -5,6 +5,7 @@ import { RegisterComponent } from "./register/register";
 import { ProfileComponent } from "./profile/profile";
 import { MangaSearchComponent } from "./manga-search/manga-search";
 import { MangaDetailComponent } from "./manga-detail/manga-detail";
+import { MangaViewerComponent } from "./manga-viewer/manga-viewer";
 import { LibraryComponent } from "./library/library";
 import { authGuard, guestGuard } from "./auth.guard";
 
@@ -17,5 +18,7 @@ export const routes: Routes = [
   { path: 'library', component: LibraryComponent }, // Removed auth guard to allow guest access
   { path: 'search', component: MangaSearchComponent },
   { path: 'manga/:id', component: MangaDetailComponent }, // Add manga detail route
+  { path: 'read/:id', component: MangaViewerComponent }, // Add manga reader route
+  { path: 'read/:id/:chapterId', component: MangaViewerComponent }, // Add chapter-specific reader route
   { path: '**', redirectTo: '/home' } // Wildcard route for 404s
 ];

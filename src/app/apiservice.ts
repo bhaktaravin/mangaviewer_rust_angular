@@ -222,4 +222,18 @@ export class Apiservice {
       headers: new HttpHeaders({ 'Content-Type': 'application/json' })
     });
   }
+
+  // Get detailed manga information with chapters
+  getMangaDetails(mangaId: string): Observable<any> {
+    return this.http.get(`${this.baseUrl}/api/manga/${mangaId}/details`, {
+      headers: this.getAuthHeaders()
+    });
+  }
+
+  // Get chapter pages/images
+  getChapterPages(mangaId: string, chapterId: string): Observable<any> {
+    return this.http.get(`${this.baseUrl}/api/manga/${mangaId}/chapters/${chapterId}/pages`, {
+      headers: this.getAuthHeaders()
+    });
+  }
 }

@@ -1,0 +1,218 @@
+<div class="manga-viewer-container">
+  @if (loading()) {
+    <div class="loading-screen">
+      <div class="loading-spinner"></div>
+      <p>Loading manga...</p>
+    </div>
+  } @else if (mangaDetails() && currentChapter()) {
+    <!-- Header with manga info and controls -->
+    <header class="viewer-header">
+      <div class="header-left">
+        <button class="btn btn-secondary" (click)="goBack()">
+          ← Back to Library
+        </button>
+        <div class="manga-info">
+          <h1>{{ mangaDetails()?.title }}</h1>
+          <h2>{{ currentChapter()?.title }}</h2>
+        </div>
+      </div>
+      
+      <div class="header-right">
+        <div class="reading-mode-controls">
+          <button 
+            class="btn"
+            [class.btn-primary]="readingMode() === 'single'"
+            [class.btn-secondary]="readingMode() !== 'single'"
+            (click)="setReadingMode('single')"
+          >
+            Single Page
+          </button>
+          <button 
+            class="btn"
+            [class.btn-primary]="readingMode() === 'double'"
+            [class.btn-secondary]="readingMode() !== 'double'"
+            (click)="setReadingMode('double')"
+          >
+            Double Page
+          </button>
+          <button 
+            class="btn"
+            [class.btn-primary]="readingMode() === 'continuous'"
+            [class.btn-secondary]="readingMode() !== 'continuous'"
+            (click)="setReadingMode('continuous')"
+          >
+            Continuous
+          </button>
+        </div>
+        
+        <button class="btn btn-secondary" (click)="toggleChapterList()">
+          📚 Chapters
+        </button>
+      </div>
+    </header>
+
+    <!-- Error message if in demo mode -->
+    @if (error()) {
+      <div class="demo-warning">
+        ⚠️ {{ error() }}
+      </div>
+    }
+
+    <!-- Chapter list sidebar -->
+    @if (showChapterList()) {
+      <div class="chapter-sidebar">
+        <div class="sidebar-header">
+          <h3>Chapters</h3>
+          <button class="close-btn" (click)="toggleChapterList()">×</button>
+        </div>
+        <div class="chapter-list">
+          @for (chapter of mangaDetails()?.chapters || []; track chapter.id) {
+            <div 
+              class="chapter-item"
+              [class.active]="chapter.id === currentChapter()?.id"
+              (click)="selectChapter(chapter.id)"
+            >
+              <span class="chapter-number">{{ chapter.chapter_number }}</span>
+              <span class="chapter-title">{{ chapter.title }}</span>
+            </div>
+          }
+        </div>
+      </div>
+    }
+
+    <!-- Main reading area -->
+    <main class="reading-area" [class.show-sidebar]="showChapterList()">
+      
+      <!-- Single page mode -->
+      @if (readingMode() === 'single') {
+        <div class="single-page-container">
+          @if (currentChapter()?.pages && currentChapter()!.pages[currentPage()]) {
+            <img 
+              [src]="currentChapter()!.pages[currentPage()]"
+              [alt]="'Page ' + (currentPage() + 1)"
+              class="manga-page"
+              (error)="onImageError($event)"
+              (click)="nextPage()"
+              (load)="onImageLoad($event)"
+            />
+          } @else {
+            <div style="color: white; padding: 20px; background: red; text-align: center;">
+              <p>No page available</p>
+              <p>Debug: Pages={{ !!currentChapter()?.pages }}, Index={{ currentPage() }}</p>
+            </div>
+          }
+        </div>
+      }
+
+      <!-- Double page mode -->
+      @if (readingMode() === 'double') {
+        <div class="double-page-container">
+          @if (currentChapter()?.pages && currentChapter()!.pages[currentPage()]) {
+            <img 
+              [src]="currentChapter()!.pages[currentPage()]"
+              [alt]="'Page ' + (currentPage() + 1)"
+              class="manga-page left-page"
+              (error)="onImageError($event)"
+            />
+          }
+          @if (currentChapter()?.pages && currentChapter()!.pages[currentPage() + 1]) {
+            <img 
+              [src]="currentChapter()!.pages[currentPage() + 1]"
+              [alt]="'Page ' + (currentPage() + 2)"
+              class="manga-page right-page"
+              (error)="onImageError($event)"
+            />
+          }
+        </div>
+      }
+
+      <!-- Continuous scroll mode -->
+      @if (readingMode() === 'continuous') {
+        <div class="continuous-container">
+          @for (page of currentChapter()?.pages || []; track $index) {
+            <img 
+              [src]="page"
+              [alt]="'Page ' + ($index + 1)"
+              class="manga-page continuous-page"
+              (error)="onImageError($event)"
+            />
+          }
+        </div>
+      }
+    </main>
+
+    <!-- Navigation controls -->
+    <div class="navigation-controls">
+      <!-- Page navigation -->
+      @if (readingMode() !== 'continuous') {
+        <div class="page-navigation">
+          <button 
+            class="nav-btn prev-btn"
+            (click)="previousPage()"
+            [disabled]="!hasPreviousPage() && !hasPreviousChapter()"
+          >
+            ← Previous
+          </button>
+          
+          <div class="page-info">
+            <span>Page {{ currentPage() + 1 }} of {{ totalPages() }}</span>
+            <div class="page-slider">
+              <input 
+                type="range" 
+                [min]="0" 
+                [max]="totalPages() - 1"
+                [value]="currentPage()"
+                (input)="onPageSliderChange($event)"
+                class="page-range"
+              />
+            </div>
+          </div>
+          
+          <button 
+            class="nav-btn next-btn"
+            (click)="nextPage()"
+            [disabled]="!hasNextPage() && !hasNextChapter()"
+          >
+            Next →
+          </button>
+        </div>
+      }
+
+      <!-- Chapter navigation -->
+      <div class="chapter-navigation">
+        <button 
+          class="nav-btn chapter-btn"
+          (click)="previousChapter()"
+          [disabled]="!hasPreviousChapter()"
+        >
+          ← Previous Chapter
+        </button>
+        
+        <span class="current-chapter">
+          Chapter {{ currentChapter()?.chapter_number }}
+        </span>
+        
+        <button 
+          class="nav-btn chapter-btn"
+          (click)="nextChapter()"
+          [disabled]="!hasNextChapter()"
+        >
+          Next Chapter →
+        </button>
+      </div>
+    </div>
+
+    <!-- Keyboard shortcuts help -->
+    <div class="shortcuts-info">
+      <p><strong>Shortcuts:</strong> 
+        Space/→ Next Page | ← Previous Page | ↑ Previous Chapter | ↓ Next Chapter | Esc Back
+      </p>
+    </div>
+  } @else {
+    <div class="error-screen">
+      <h2>Manga not found</h2>
+      <p>The requested manga could not be loaded.</p>
+      <button class="btn btn-primary" (click)="goBack()">Back to Library</button>
+    </div>
+  }
+</div>
