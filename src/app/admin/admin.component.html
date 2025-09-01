@@ -1,0 +1,350 @@
+<div class="admin-container">
+  <!-- Admin Header -->
+  <header class="admin-header">
+    <h1>🛡️ Admin Dashboard</h1>
+    <div class="admin-actions">
+      <button class="btn btn-outline" (click)="loadAdminData()">
+        🔄 Refresh
+      </button>
+      <button class="btn btn-danger" routerLink="/home">
+        🚪 Exit Admin
+      </button>
+    </div>
+  </header>
+
+  <!-- Loading State -->
+  <div *ngIf="loading()" class="loading-container">
+    <div class="loading-spinner"></div>
+    <p>Loading admin data...</p>
+  </div>
+
+  <!-- Error State -->
+  <div *ngIf="error()" class="error-container">
+    <div class="error-message">
+      ⚠️ {{ error() }}
+    </div>
+  </div>
+
+  <!-- Admin Content -->
+  <div *ngIf="!loading()" class="admin-content">
+    <!-- Navigation Tabs -->
+    <nav class="admin-nav">
+      <button 
+        class="nav-tab"
+        [class.active]="activeTab() === 'dashboard'"
+        (click)="setActiveTab('dashboard')"
+      >
+        📊 Dashboard
+      </button>
+      <button 
+        class="nav-tab"
+        [class.active]="activeTab() === 'users'"
+        (click)="setActiveTab('users')"
+      >
+        👥 Users ({{ users().length }})
+      </button>
+      <button 
+        class="nav-tab"
+        [class.active]="activeTab() === 'content'"
+        (click)="setActiveTab('content')"
+      >
+        📚 Content
+      </button>
+      <button 
+        class="nav-tab"
+        [class.active]="activeTab() === 'settings'"
+        (click)="setActiveTab('settings')"
+      >
+        ⚙️ Settings
+      </button>
+    </nav>
+
+    <!-- Dashboard Tab -->
+    <div *ngIf="activeTab() === 'dashboard'" class="tab-content">
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="stat-icon">👥</div>
+          <div class="stat-info">
+            <h3>{{ stats().totalUsers }}</h3>
+            <p>Total Users</p>
+            <small>{{ stats().activeUsers }} active</small>
+          </div>
+        </div>
+
+        <div class="stat-card">
+          <div class="stat-icon">📚</div>
+          <div class="stat-info">
+            <h3>{{ stats().totalManga }}</h3>
+            <p>Total Manga</p>
+            <small>{{ stats().totalChapters }} chapters</small>
+          </div>
+        </div>
+
+        <div class="stat-card">
+          <div class="stat-icon">📥</div>
+          <div class="stat-info">
+            <h3>{{ stats().dailyDownloads }}</h3>
+            <p>Daily Downloads</p>
+            <small>Last 24 hours</small>
+          </div>
+        </div>
+
+        <div class="stat-card">
+          <div class="stat-icon" [style.color]="stats().systemStatus === 'healthy' ? '#28a745' : '#dc3545'">
+            {{ stats().systemStatus === 'healthy' ? '✅' : '⚠️' }}
+          </div>
+          <div class="stat-info">
+            <h3>{{ stats().systemStatus | titlecase }}</h3>
+            <p>System Status</p>
+            <small>All services online</small>
+          </div>
+        </div>
+      </div>
+
+      <!-- Quick Actions -->
+      <div class="quick-actions">
+        <h3>Quick Actions</h3>
+        <div class="action-buttons">
+          <button class="btn btn-primary" (click)="setActiveTab('users')">
+            👥 Manage Users
+          </button>
+          <button class="btn btn-outline" (click)="exportUserData()">
+            📊 Export Data
+          </button>
+          <button class="btn btn-warning">
+            🧹 System Cleanup
+          </button>
+          <button class="btn btn-info">
+            📈 View Analytics
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Users Management Tab -->
+    <div *ngIf="activeTab() === 'users'" class="tab-content">
+      <div class="users-header">
+        <h3>User Management</h3>
+        
+        <!-- User Filters -->
+        <div class="user-filters">
+          <input
+            type="text"
+            placeholder="Search users..."
+            [value]="userSearchTerm()"
+            (input)="updateUserSearch($any($event.target).value)"
+            class="search-input"
+          />
+          
+          <select 
+            [value]="userFilterRole()"
+            (change)="updateUserRoleFilter($any($event.target).value)"
+            class="filter-select"
+          >
+            <option value="all">All Roles</option>
+            <option value="user">Users</option>
+            <option value="moderator">Moderators</option>
+            <option value="admin">Admins</option>
+          </select>
+          
+          <select 
+            [value]="userFilterStatus()"
+            (change)="updateUserStatusFilter($any($event.target).value)"
+            class="filter-select"
+          >
+            <option value="all">All Status</option>
+            <option value="active">Active</option>
+            <option value="suspended">Suspended</option>
+            <option value="banned">Banned</option>
+          </select>
+        </div>
+
+        <!-- Bulk Actions -->
+        <div *ngIf="selectedUsers().size > 0" class="bulk-actions">
+          <span class="selected-count">{{ selectedUsers().size }} selected</span>
+          <button class="btn btn-sm btn-success" (click)="bulkUpdateUserStatus('active')">
+            ✅ Activate
+          </button>
+          <button class="btn btn-sm btn-warning" (click)="bulkUpdateUserStatus('suspended')">
+            ⏸️ Suspend
+          </button>
+          <button class="btn btn-sm btn-danger" (click)="bulkUpdateUserStatus('banned')">
+            🚫 Ban
+          </button>
+          <button class="btn btn-sm btn-outline" (click)="clearUserSelection()">
+            Clear
+          </button>
+        </div>
+      </div>
+
+      <!-- Users Table -->
+      <div class="users-table-container">
+        <table class="users-table">
+          <thead>
+            <tr>
+              <th>
+                <input 
+                  type="checkbox" 
+                  [checked]="selectedUsers().size === filteredUsers().length && filteredUsers().length > 0"
+                  (change)="selectedUsers().size === filteredUsers().length ? clearUserSelection() : selectAllUsers()"
+                />
+              </th>
+              <th>Username</th>
+              <th>Email</th>
+              <th>Role</th>
+              <th>Status</th>
+              <th>Join Date</th>
+              <th>Last Active</th>
+              <th>Downloads</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let user of filteredUsers()" [class.selected]="selectedUsers().has(user.id)">
+              <td>
+                <input 
+                  type="checkbox"
+                  [checked]="selectedUsers().has(user.id)"
+                  (change)="toggleUserSelection(user.id)"
+                />
+              </td>
+              <td class="username">{{ user.username }}</td>
+              <td class="email">{{ user.email }}</td>
+              <td>
+                <span 
+                  class="role-badge"
+                  [style.background-color]="getRoleColor(user.role)"
+                >
+                  {{ user.role | titlecase }}
+                </span>
+              </td>
+              <td>
+                <span 
+                  class="status-badge"
+                  [style.background-color]="getStatusColor(user.status)"
+                >
+                  {{ user.status | titlecase }}
+                </span>
+              </td>
+              <td>{{ formatDate(user.joinDate) }}</td>
+              <td>{{ formatDate(user.lastActive) }}</td>
+              <td class="downloads">{{ user.downloadCount }}</td>
+              <td class="actions">
+                <div class="action-buttons">
+                  <select 
+                    [value]="user.status"
+                    (change)="updateUserStatus(user.id, $any($event.target).value)"
+                    class="action-select"
+                  >
+                    <option value="active">Active</option>
+                    <option value="suspended">Suspended</option>
+                    <option value="banned">Banned</option>
+                  </select>
+                  
+                  <select 
+                    [value]="user.role"
+                    (change)="updateUserRole(user.id, $any($event.target).value)"
+                    class="action-select"
+                  >
+                    <option value="user">User</option>
+                    <option value="moderator">Moderator</option>
+                    <option value="admin">Admin</option>
+                  </select>
+                </div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+
+        <div *ngIf="filteredUsers().length === 0" class="no-users">
+          <p>No users found matching the current filters.</p>
+        </div>
+      </div>
+
+      <!-- Export Button -->
+      <div class="export-section">
+        <button class="btn btn-outline" (click)="exportUserData()">
+          📊 Export User Data (CSV)
+        </button>
+      </div>
+    </div>
+
+    <!-- Content Management Tab -->
+    <div *ngIf="activeTab() === 'content'" class="tab-content">
+      <div class="content-management">
+        <h3>Content Management</h3>
+        <p>Content moderation tools coming soon...</p>
+        
+        <div class="feature-cards">
+          <div class="feature-card">
+            <h4>🔍 Content Review</h4>
+            <p>Review and moderate user-uploaded content</p>
+            <button class="btn btn-outline" disabled>Coming Soon</button>
+          </div>
+          
+          <div class="feature-card">
+            <h4>📚 Manga Database</h4>
+            <p>Manage manga metadata and chapters</p>
+            <button class="btn btn-outline" disabled>Coming Soon</button>
+          </div>
+          
+          <div class="feature-card">
+            <h4>🏷️ Tags & Categories</h4>
+            <p>Organize content with tags and categories</p>
+            <button class="btn btn-outline" disabled>Coming Soon</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Settings Tab -->
+    <div *ngIf="activeTab() === 'settings'" class="tab-content">
+      <div class="settings-management">
+        <h3>System Settings</h3>
+        <p>Application configuration and settings...</p>
+        
+        <div class="settings-groups">
+          <div class="settings-group">
+            <h4>⚙️ General Settings</h4>
+            <div class="setting-item">
+              <label>Site Maintenance Mode</label>
+              <input type="checkbox" disabled />
+            </div>
+            <div class="setting-item">
+              <label>User Registration</label>
+              <input type="checkbox" checked disabled />
+            </div>
+            <div class="setting-item">
+              <label>Guest Access</label>
+              <input type="checkbox" checked disabled />
+            </div>
+          </div>
+          
+          <div class="settings-group">
+            <h4>🔒 Security Settings</h4>
+            <div class="setting-item">
+              <label>Two-Factor Authentication</label>
+              <input type="checkbox" disabled />
+            </div>
+            <div class="setting-item">
+              <label>Password Requirements</label>
+              <button class="btn btn-sm btn-outline" disabled>Configure</button>
+            </div>
+          </div>
+          
+          <div class="settings-group">
+            <h4>📊 Analytics</h4>
+            <div class="setting-item">
+              <label>Usage Analytics</label>
+              <input type="checkbox" checked disabled />
+            </div>
+            <div class="setting-item">
+              <label>Error Reporting</label>
+              <input type="checkbox" checked disabled />
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

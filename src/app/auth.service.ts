@@ -7,6 +7,7 @@ export interface User {
   id: string;  // Changed from number to string to match Rust backend
   username: string;
   email: string;
+  role?: 'user' | 'admin' | 'moderator'; // Add role field
 }
 
 @Injectable({
@@ -43,7 +44,8 @@ export class AuthService {
         const user: User = {
           id: response.user.id,
           username: response.user.username,
-          email: response.user.email
+          email: response.user.email,
+          role: this.getDefaultRole(response.user.username) // Add default role based on username
         };
         
         this.currentUser.set(user);
@@ -126,10 +128,12 @@ export class AuthService {
 
   logout(): void {
     try {
-      // Call API logout endpoint (fire and forget)
-      this.apiService.logout().subscribe({
-        error: (error) => console.warn('Logout API call failed:', error)
-      });
+      // Only call API logout if not in guest mode
+      if (!this.isGuestMode()) {
+        this.apiService.logout().subscribe({
+          error: (error) => console.warn('Logout API call failed:', error)
+        });
+      }
     } catch (error) {
       console.warn('Logout error:', error);
     }
@@ -139,6 +143,7 @@ export class AuthService {
     this.isAuthenticated.set(false);
     localStorage.removeItem('currentUser');
     localStorage.removeItem('authToken');
+    localStorage.removeItem('isGuestMode');
     this.router.navigate(['/login']);
   }
 
@@ -148,5 +153,82 @@ export class AuthService {
 
   getCurrentUser(): User | null {
     return this.currentUser();
+  }
+
+  isAdmin(): boolean {
+    const user = this.getCurrentUser();
+    return user?.role === 'admin' || user?.username === 'admin' || user?.username === 'manga_admin';
+  }
+
+  isModerator(): boolean {
+    const user = this.getCurrentUser();
+    return user?.role === 'moderator' || user?.role === 'admin' || this.isAdmin();
+  }
+
+  // Guest Admin Login - bypasses backend authentication
+  loginAsGuestAdmin(): void {
+    const guestAdminUser: User = {
+      id: 'guest-admin-001',
+      username: 'guest_admin',
+      email: 'admin@demo.local',
+      role: 'admin'
+    };
+
+    this.currentUser.set(guestAdminUser);
+    this.isAuthenticated.set(true);
+    localStorage.setItem('currentUser', JSON.stringify(guestAdminUser));
+    localStorage.setItem('authToken', 'guest-admin-token');
+    localStorage.setItem('isGuestMode', 'true');
+  }
+
+  // Regular Guest Login - standard user permissions
+  loginAsGuest(): void {
+    const guestUser: User = {
+      id: 'guest-user-001',
+      username: 'guest_user',
+      email: 'user@demo.local',
+      role: 'user'
+    };
+
+    this.currentUser.set(guestUser);
+    this.isAuthenticated.set(true);
+    localStorage.setItem('currentUser', JSON.stringify(guestUser));
+    localStorage.setItem('authToken', 'guest-user-token');
+    localStorage.setItem('isGuestMode', 'true');
+  }
+
+  // Special Admin Login - for admin usernames that bypass authentication
+  loginAsSpecialAdmin(username: string): void {
+    const adminUser: User = {
+      id: `admin-${Date.now()}`,
+      username: username,
+      email: `${username}@admin.local`,
+      role: 'admin'
+    };
+
+    this.currentUser.set(adminUser);
+    this.isAuthenticated.set(true);
+    localStorage.setItem('currentUser', JSON.stringify(adminUser));
+    localStorage.setItem('authToken', `admin-token-${Date.now()}`);
+    localStorage.setItem('isGuestMode', 'true'); // Mark as demo mode
+  }
+
+  // Check if current session is guest mode
+  isGuestMode(): boolean {
+    return localStorage.getItem('isGuestMode') === 'true';
+  }
+
+  private getDefaultRole(username: string): 'user' | 'admin' | 'moderator' {
+    // Define admin usernames
+    const adminUsernames = ['admin', 'manga_admin', 'administrator', 'root'];
+    const moderatorUsernames = ['moderator', 'mod', 'content_mod'];
+    
+    if (adminUsernames.includes(username.toLowerCase())) {
+      return 'admin';
+    } else if (moderatorUsernames.includes(username.toLowerCase())) {
+      return 'moderator';
+    }
+    
+    return 'user';
   }
 }

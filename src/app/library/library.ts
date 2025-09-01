@@ -133,6 +133,15 @@ export class LibraryComponent implements OnInit {
   ) {}
 
   ngOnInit() {
+    // Check if we're in guest mode first
+    if (this.authService.isGuestMode() || !this.authService.authenticated()) {
+      console.log('Guest mode or unauthenticated, loading demo data directly');
+      this.loadDemoData();
+      // Calculate stats from demo data instead of calling API
+      setTimeout(() => this.calculateLocalStats(), 100);
+      return;
+    }
+    
     this.loadLibrary();
     this.loadStats();
   }
@@ -191,15 +200,17 @@ export class LibraryComponent implements OnInit {
   }
 
   private loadDemoData() {
-    console.log('Loading demo data...');
+    console.log('Loading demo data with MangaDX covers...');
     this.isDemoMode.set(true);
+    
+    // Demo data with titles that exist on MangaDX
     const demoLibrary: MangaLibraryItem[] = [
       {
-        id: 'demo-2',
+        id: 'demo-1',
         title: 'Naruto (Demo)',
         author: 'Masashi Kishimoto',
         description: 'The story of Uzumaki Naruto and his journey to become Hokage. Demo version with sample reading pages.',
-        cover_url: 'https://m.media-amazon.com/images/M/MV5BZmQ5NGFiNWEtMmMyMC00MDdiLWI4YWQtZTg0YmNhNTljNDFkXkEyXkFqcGdeQXVyNTA4NzY1MzY@._V1_.jpg',
+        cover_url: 'https://via.placeholder.com/300x400/FF6B35/white?text=Naruto',
         status: 'reading',
         progress: {
           current_chapter: 1,
@@ -215,11 +226,11 @@ export class LibraryComponent implements OnInit {
         notes: 'Classic ninja manga! Demo version includes sample pages for testing the reader.'
       },
       {
-        id: '1',
-        title: 'One Piece',
+        id: 'demo-2',
+        title: 'One Piece (Demo)',
         author: 'Eiichiro Oda',
         description: 'The story of Monkey D. Luffy and his journey to become Pirate King',
-        cover_url: 'https://m.media-amazon.com/images/M/MV5BODcwNWE3OTMtMDc3MS00NDFjLWE1OTAtNDU3NjgxODMxY2UyXkEyXkFqcGdeQXVyNTAyODkwOQ@@._V1_.jpg',
+        cover_url: 'https://via.placeholder.com/300x400/4CAF50/white?text=One+Piece',
         status: 'reading',
         progress: {
           current_chapter: 1095,
@@ -235,11 +246,11 @@ export class LibraryComponent implements OnInit {
         notes: 'Amazing adventure story! Currently following the Egghead arc.'
       },
       {
-        id: '2',
-        title: 'Attack on Titan',
+        id: 'demo-3',
+        title: 'Attack on Titan (Demo)',
         author: 'Hajime Isayama',
         description: 'Humanity fights for survival against giant humanoid Titans',
-        cover_url: 'https://m.media-amazon.com/images/M/MV5BNzc5MTczNDQtNDFjNi00ZGM3LWE3OWMtZGEzNWY2Y2U4YmZiXkEyXkFqcGdeQXVyNTAyODkwOQ@@._V1_FMjpg_UX1000_.jpg',
+        cover_url: 'https://via.placeholder.com/300x400/F44336/white?text=Attack+on+Titan',
         status: 'completed',
         progress: {
           current_chapter: 139,
@@ -255,11 +266,11 @@ export class LibraryComponent implements OnInit {
         notes: 'Incredible ending to an epic series. Mind-blowing plot twists!'
       },
       {
-        id: '3',
-        title: 'Demon Slayer',
+        id: 'demo-4',
+        title: 'Demon Slayer (Demo)',
         author: 'Koyoharu Gotouge',
         description: 'Tanjiro joins the Demon Slayer Corps to save his sister',
-        cover_url: 'https://m.media-amazon.com/images/M/MV5BZjZjNzI5MDctY2Y4YS00NmM4LTljMmItZTFkOTExNGI3ODRhXkEyXkFqcGdeQXVyNjc3MjQzNTI@._V1_.jpg',
+        cover_url: 'https://via.placeholder.com/300x400/9C27B0/white?text=Demon+Slayer',
         status: 'completed',
         progress: {
           current_chapter: 205,
@@ -267,68 +278,69 @@ export class LibraryComponent implements OnInit {
           current_volume: 23,
           total_volumes: 23
         },
-        rating: 5,
+        rating: 4,
         tags: ['Action', 'Historical', 'Shounen', 'Supernatural'],
         is_favorite: false,
-        date_added: '2023-03-20T11:30:00Z',
-        date_updated: '2023-08-15T13:20:00Z',
-        notes: 'Beautiful art and emotional story. The anime adaptation is stunning!'
-      },
-      {
-        id: '4',
-        title: 'My Hero Academia',
-        author: 'Kohei Horikoshi',
-        description: 'Izuku Midoriya aims to become a hero in a world full of superpowers',
-        status: 'on_hold',
-        progress: {
-          current_chapter: 280,
-          total_chapters: undefined,
-          current_volume: 29,
-          total_volumes: undefined
-        },
-        rating: 3,
-        tags: ['Action', 'School', 'Shounen', 'Super Power'],
-        is_favorite: false,
-        date_added: '2022-11-05T14:00:00Z',
-        date_updated: '2024-02-10T10:15:00Z',
-        notes: 'Taking a break but planning to catch up soon.'
-      },
-      {
-        id: '5',
-        title: 'Jujutsu Kaisen',
-        author: 'Gege Akutami',
-        description: 'Yuji Itadori joins the world of jujutsu sorcerers',
-        status: 'plan_to_read',
-        progress: {
-          current_chapter: 0,
-          total_chapters: undefined,
-          current_volume: 0,
-          total_volumes: undefined
-        },
-        rating: undefined,
-        tags: ['Action', 'School', 'Shounen', 'Supernatural'],
-        is_favorite: false,
-        date_added: '2024-07-20T16:45:00Z',
-        date_updated: '2024-07-20T16:45:00Z',
-        notes: 'Heard great things about this series. Adding to reading list!'
+        date_added: '2023-03-15T14:22:00Z',
+        date_updated: '2023-11-20T19:45:00Z',
+        notes: 'Beautiful art and touching story. The animation was phenomenal!'
       }
     ];
 
+    // Set initial data with placeholders
     this.libraryItems.set(demoLibrary);
+    this.stats.set(this.calculateStats(demoLibrary));
+
+    // Fetch real covers from MangaDX API
+    this.loadMangaDxCovers(demoLibrary);
+  }
+
+  private loadMangaDxCovers(demoLibrary: MangaLibraryItem[]) {
+    // Skip MangaDX API calls in demo mode to reduce bundle size
+    // and avoid unnecessary API calls
+    console.log('Skipping MangaDX cover fetch in demo mode to reduce bundle size');
+    return;
     
-    // Set demo stats
-    const demoStats: LibraryStats = {
-      total_manga: 5,
-      reading: 1,
-      completed: 2,
-      on_hold: 1,
-      plan_to_read: 1,
-      dropped: 0,
-      total_chapters_read: 1619,
-      average_rating: 4.25
+    /*
+    console.log('Fetching real covers from MangaDX...');
+    
+    // Create observables for each manga cover
+    const coverRequests = demoLibrary.map(manga => 
+      this.mangadxService.getMangaCoverByTitle(manga.title)
+    );
+
+    // Execute all requests in parallel
+    forkJoin(coverRequests).subscribe({
+      next: (coverUrls) => {
+        const updatedLibrary = demoLibrary.map((manga, index) => ({
+          ...manga,
+          cover_url: coverUrls[index] || manga.cover_url // Use MangaDX cover or fallback to placeholder
+        }));
+
+        console.log('Updated library with MangaDX covers:', updatedLibrary);
+        this.libraryItems.set(updatedLibrary);
+      },
+      error: (error) => {
+        console.error('Error loading MangaDX covers:', error);
+        // Keep the existing placeholder covers if API fails
+      }
+    });
+    */
+  }
+
+  private calculateStats(items: MangaLibraryItem[]): LibraryStats {
+    return {
+      total_manga: items.length,
+      reading: items.filter(item => item.status === 'reading').length,
+      completed: items.filter(item => item.status === 'completed').length,
+      on_hold: items.filter(item => item.status === 'on_hold').length,
+      plan_to_read: items.filter(item => item.status === 'plan_to_read').length,
+      dropped: items.filter(item => item.status === 'dropped').length,
+      total_chapters_read: items.reduce((sum, item) => sum + item.progress.current_chapter, 0),
+      average_rating: items.filter(item => item.rating).length > 0 
+        ? items.filter(item => item.rating).reduce((sum, item) => sum + (item.rating || 0), 0) / items.filter(item => item.rating).length
+        : 0
     };
-    
-    this.stats.set(demoStats);
   }
 
   async loadStats() {

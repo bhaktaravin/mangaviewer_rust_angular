@@ -36,14 +36,18 @@ export class ThemeService {
 
   private applyTheme(theme: Theme): void {
     if (typeof document !== 'undefined') {
+      console.log(`Applying theme: ${theme}`);
       document.documentElement.setAttribute('data-theme', theme);
       document.documentElement.classList.remove('light', 'dark');
       document.documentElement.classList.add(theme);
+      console.log(`Theme applied. HTML element classes:`, document.documentElement.className);
+      console.log(`Theme applied. HTML element data-theme:`, document.documentElement.getAttribute('data-theme'));
     }
   }
 
   toggleTheme(): void {
     const newTheme: Theme = this.currentTheme() === 'light' ? 'dark' : 'light';
+    console.log(`Toggling theme from ${this.currentTheme()} to ${newTheme}`);
     this.setTheme(newTheme);
   }
 

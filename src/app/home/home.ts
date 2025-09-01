@@ -96,4 +96,30 @@ export class HomeComponent {
       planToRead: 0
     });
   }
+
+  // Quick access methods for demo
+  isAdmin(): boolean {
+    return this.authService.isAdmin();
+  }
+
+  isGuestMode(): boolean {
+    return this.authService.isGuestMode();
+  }
+
+  loginAsGuestAdmin(): void {
+    this.authService.loginAsGuestAdmin();
+    this.isAuthenticated.set(true);
+    this.user.set(this.authService.getCurrentUser());
+    this.router.navigate(['/admin']);
+  }
+
+  loginAsGuest(): void {
+    this.authService.loginAsGuest();
+    this.isAuthenticated.set(true);
+    this.user.set(this.authService.getCurrentUser());
+  }
+
+  goToAdmin(): void {
+    this.router.navigate(['/admin']);
+  }
 }

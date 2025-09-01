@@ -34,9 +34,21 @@ import { ThemeService } from '../theme.service';
             <a routerLink="/search" class="nav-link" routerLinkActive="active">Search</a>
             <a routerLink="/profile" class="nav-link" routerLinkActive="active">Profile</a>
             
+            <!-- Admin Link (only for admin users) -->
+            @if (isAdmin()) {
+              <a routerLink="/admin" class="nav-link admin-link" routerLinkActive="active">
+                🛡️ Admin
+              </a>
+            }
+            
             <!-- User Menu -->
             <div class="user-menu">
-              <span class="user-greeting">{{ user()!.username }}</span>
+              <span class="user-greeting">
+                {{ user()!.username }}
+                @if (isGuestMode()) {
+                  <span class="guest-badge">DEMO</span>
+                }
+              </span>
               <button class="btn btn-outline btn-sm" (click)="logout()">
                 Logout
               </button>
@@ -108,6 +120,17 @@ import { ThemeService } from '../theme.service';
       color: white;
     }
 
+    .admin-link {
+      background-color: rgba(220, 53, 69, 0.2) !important;
+      border: 1px solid rgba(220, 53, 69, 0.5);
+      font-weight: 600;
+    }
+
+    .admin-link:hover {
+      background-color: rgba(220, 53, 69, 0.3) !important;
+      border-color: rgba(220, 53, 69, 0.7);
+    }
+
     .theme-toggle {
       background: rgba(255, 255, 255, 0.1);
       border: 2px solid rgba(255, 255, 255, 0.3);
@@ -143,6 +166,20 @@ import { ThemeService } from '../theme.service';
     .user-greeting {
       font-weight: 500;
       opacity: 0.9;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .guest-badge {
+      background: rgba(255, 193, 7, 0.9);
+      color: #212529;
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-size: 0.7rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
     }
 
     .auth-links {
@@ -211,6 +248,8 @@ export class NavbarComponent {
   user = computed(() => this.authService.user());
   isAuthenticated = computed(() => this.authService.authenticated());
   isDarkMode = computed(() => this.themeService.isDark());
+  isAdmin = computed(() => this.authService.isAdmin());
+  isGuestMode = computed(() => this.authService.isGuestMode());
 
   constructor(
     private authService: AuthService,

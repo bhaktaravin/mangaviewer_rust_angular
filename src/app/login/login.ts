@@ -32,6 +32,18 @@ export class LoginComponent {
     this.error.set('');
 
     try {
+      // Check for special admin usernames that bypass backend authentication
+      const username = this.username().toLowerCase();
+      const adminUsernames = ['admin', 'administrator', 'manga_admin', 'root'];
+      
+      if (adminUsernames.includes(username)) {
+        // Auto-login as admin for special usernames
+        this.authService.loginAsSpecialAdmin(this.username());
+        this.router.navigate(['/admin']);
+        return;
+      }
+
+      // Regular login process for other users
       const result = await this.authService.login(this.username(), this.password());
       
       if (result.success) {
@@ -52,8 +64,14 @@ export class LoginComponent {
   }
 
   continueAsGuest() {
-    console.log('continueAsGuest clicked, navigating to /library');
-    // Navigate directly to library in demo mode without authentication
+    console.log('continueAsGuest clicked, logging in as guest user');
+    this.authService.loginAsGuest();
     this.router.navigate(['/library']);
+  }
+
+  loginAsGuestAdmin() {
+    console.log('loginAsGuestAdmin clicked, logging in as guest admin');
+    this.authService.loginAsGuestAdmin();
+    this.router.navigate(['/admin']);
   }
 }

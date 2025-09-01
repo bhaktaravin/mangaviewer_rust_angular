@@ -6,6 +6,23 @@
       <section class="welcome-section">
         <h1>Welcome back, {{ user()!.username }}! 🎉</h1>
         <p class="welcome-subtitle">Ready to dive into your manga collection?</p>
+        
+        @if (isGuestMode()) {
+          <div class="demo-notice">
+            <span class="demo-badge">🧪 DEMO MODE</span>
+            <p>You're currently in demo mode. All features are available for testing!</p>
+          </div>
+        }
+        
+        @if (isAdmin()) {
+          <div class="admin-panel">
+            <span class="admin-badge">🛡️ ADMIN ACCESS</span>
+            <p>You have administrative privileges</p>
+            <button class="btn btn-admin" (click)="goToAdmin()">
+              Open Admin Dashboard
+            </button>
+          </div>
+        }
       </section>
 
       <section class="features-section">
@@ -71,6 +88,20 @@
           <button class="btn btn-outline btn-large" (click)="goToLogin()">
             Already have an account?
           </button>
+        </div>
+
+        <!-- Quick Demo Access -->
+        <div class="demo-access">
+          <h3>🚀 Try Demo Mode</h3>
+          <p>Experience all features without registration</p>
+          <div class="demo-buttons">
+            <button class="btn btn-demo" (click)="loginAsGuest()">
+              👤 Demo as User
+            </button>
+            <button class="btn btn-admin-demo" (click)="loginAsGuestAdmin()">
+              🛡️ Demo as Admin
+            </button>
+          </div>
         </div>
       </section>
     }

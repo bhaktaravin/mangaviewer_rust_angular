@@ -1,0 +1,121 @@
+<div class="register-container">
+  <div class="register-card">
+    <h2>Create Account</h2>
+    
+    <form (ngSubmit)="onSubmit()" class="register-form">
+      <!-- Username Field -->
+      <div class="form-group">
+        <label for="username">Username</label>
+        <input
+          type="text"
+          id="username"
+          [value]="formData().username"
+          (input)="updateFormField('username', $any($event.target).value)"
+          placeholder="Enter your username"
+          class="form-control"
+          [class.invalid]="formData().username.length > 0 && !usernameValid()"
+        />
+        <small class="admin-hint">
+          💡 Tip: Use 'admin' as username for instant admin access
+        </small>
+        <div *ngIf="formData().username.length > 0 && !usernameValid()" class="error-text">
+          Username must be 3-20 characters long
+        </div>
+      </div>
+
+      <!-- Email Field -->
+      <div class="form-group">
+        <label for="email">Email</label>
+        <input
+          type="email"
+          id="email"
+          [value]="formData().email"
+          (input)="updateFormField('email', $any($event.target).value)"
+          placeholder="Enter your email"
+          class="form-control"
+          [class.invalid]="formData().email.length > 0 && !emailValid()"
+        />
+        <div *ngIf="formData().email.length > 0 && !emailValid()" class="error-text">
+          Please enter a valid email address
+        </div>
+      </div>
+
+      <!-- Password Field -->
+      <div class="form-group">
+        <label for="password">Password</label>
+        <input
+          type="password"
+          id="password"
+          [value]="formData().password"
+          (input)="updateFormField('password', $any($event.target).value)"
+          (focus)="onPasswordFocus()"
+          placeholder="Enter your password"
+          class="form-control"
+        />
+        
+        <!-- Password Guidelines -->
+        <div 
+          *ngIf="showGuidelines()" 
+          class="password-guidelines"
+          [class.all-met]="allPasswordRequirementsMet()"
+        >
+          <h4>Password Requirements:</h4>
+          <ul 
+            class="requirements-list"
+            [class.all-fulfilled]="allPasswordRequirementsMet()"
+          >
+            <li 
+              *ngFor="let requirement of passwordRequirements()"
+              [class.fulfilled]="requirement.fulfilled"
+              [class.unfulfilled]="!requirement.fulfilled"
+            >
+              <span class="requirement-icon">
+                {{ requirement.fulfilled ? '✓' : '×' }}
+              </span>
+              {{ requirement.text }}
+            </li>
+          </ul>
+        </div>
+      </div>
+
+      <!-- Confirm Password Field -->
+      <div class="form-group">
+        <label for="confirmPassword">Confirm Password</label>
+        <input
+          type="password"
+          id="confirmPassword"
+          [value]="formData().confirmPassword"
+          (input)="updateFormField('confirmPassword', $any($event.target).value)"
+          placeholder="Confirm your password"
+          class="form-control"
+          [class.invalid]="formData().confirmPassword.length > 0 && !passwordsMatch()"
+        />
+        <div *ngIf="formData().confirmPassword.length > 0 && !passwordsMatch()" class="error-text">
+          Passwords do not match
+        </div>
+      </div>
+
+      <!-- Error Message -->
+      <div *ngIf="error()" class="error-message">
+        {{ error() }}
+      </div>
+
+      <!-- Submit Button -->
+      <button
+        type="submit"
+        class="submit-btn"
+        [disabled]="!formValid() || loading()"
+      >
+        <span *ngIf="loading()" class="loading-spinner"></span>
+        {{ loading() ? 'Creating Account...' : 'Create Account' }}
+      </button>
+    </form>
+
+    <div class="login-link">
+      Already have an account? 
+      <button type="button" class="link-btn" (click)="navigateToLogin()">
+        Sign In
+      </button>
+    </div>
+  </div>
+</div>
