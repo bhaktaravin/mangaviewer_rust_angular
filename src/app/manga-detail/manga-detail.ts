@@ -46,6 +46,8 @@ declare global {
   styleUrl: './manga-detail.css'
 })
 export class MangaDetailComponent implements OnInit {
+    // Accept manga as an input for Angular binding
+    @Input() manga: any;
   manga = signal<any>(null);
   
   chapters = signal<Chapter[]>([]);
