@@ -76,35 +76,7 @@ body {
   min-height: 100vh;
   background-color: var(--bg-primary);
 }
-/* Removed merge marker and duplicate code */
-  --bg-tertiary: #e9ecef;
-  --text-primary: #212529;
-  --text-secondary: #6c757d;
-  --text-muted: #adb5bd;
-  --border-color: #dee2e6;
-  --shadow: rgba(0, 0, 0, 0.1);
-  --shadow-hover: rgba(0, 0, 0, 0.15);
-  
-  /* Brand colors (same for both themes) */
-  --brand-primary: #764ba2;
-  --brand-secondary: #667eea;
-  --brand-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  
-  /* Status colors */
-  --success: #28a745;
-  --warning: #ffc107;
-  --danger: #dc3545;
-  --info: #17a2b8;
-  --error-color: #dc3545;
-  --error-hover: #c82333;
-  --brand-shadow: rgba(102, 126, 234, 0.4);
-  
-  /* Card and component styles */
-  --card-bg: var(--bg-primary);
-  --card-border: var(--border-color);
-  --input-bg: var(--bg-primary);
-  --input-border: var(--border-color);
-  --button-bg: var(--bg-secondary);
+/* Removed duplicate and misplaced CSS variable definitions */
 }
 
 /* Dark theme */
