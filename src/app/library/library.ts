@@ -162,7 +162,7 @@ export class LibraryComponent implements OnInit {
         this.libraryItems.set([]);
         this.isDemoMode.set(false);
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('API Error:', err);
       if (err.status === 0) {
         // Network error - likely CORS or connection issue
@@ -320,7 +320,7 @@ export class LibraryComponent implements OnInit {
         // Calculate stats from local library data
         this.calculateLocalStats();
       }
-    } catch (err: any) {
+    } catch {
       console.log('Stats API not available, calculating from local data');
       this.calculateLocalStats();
     }
@@ -371,12 +371,13 @@ export class LibraryComponent implements OnInit {
           return a.title.localeCompare(b.title);
         case 'rating':
           return (b.rating || 0) - (a.rating || 0);
-        case 'progress':
+        case 'progress': {
           const aProgress = a.progress.total_chapters ? 
             (a.progress.current_chapter / a.progress.total_chapters) : 0;
           const bProgress = b.progress.total_chapters ? 
             (b.progress.current_chapter / b.progress.total_chapters) : 0;
           return bProgress - aProgress;
+        }
         case 'date_added':
           return new Date(b.date_added).getTime() - new Date(a.date_added).getTime();
         case 'date_updated':
@@ -401,7 +402,7 @@ export class LibraryComponent implements OnInit {
       } else {
         console.error('Failed to toggle favorite:', response?.message);
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Failed to toggle favorite:', err);
       // For demo purposes, still update locally
       const items = this.libraryItems();
@@ -437,7 +438,7 @@ export class LibraryComponent implements OnInit {
       } else {
         console.error('Failed to update progress:', response?.message);
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Failed to update progress:', err);
       // For demo purposes, still update locally
       const items = this.libraryItems();
@@ -470,7 +471,7 @@ export class LibraryComponent implements OnInit {
       } else {
         console.error('Failed to update status:', response?.message);
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Failed to update status:', err);
       // For demo purposes, still update locally
       const items = this.libraryItems();
@@ -518,7 +519,7 @@ export class LibraryComponent implements OnInit {
       } else {
         this.error.set(response?.message || 'Failed to add manga');
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Add manga error:', err);
       this.error.set(err.error?.message || err.message || 'Failed to add manga');
     }
@@ -539,7 +540,7 @@ export class LibraryComponent implements OnInit {
         console.error('Failed to delete manga:', response?.message);
         this.error.set('Failed to remove manga from library');
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Failed to delete manga:', err);
       this.error.set('Failed to remove manga from library');
     }
@@ -635,7 +636,7 @@ export class LibraryComponent implements OnInit {
 
   updateNewMangaStatus(value: string) {
     const current = this.newManga();
-    this.newManga.set({ ...current, status: value as any });
+    this.newManga.set({ ...current, status: value as MangaLibraryItem['status'] });
   }
 
   updateNewMangaRating(value: string) {

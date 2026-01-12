@@ -15,12 +15,12 @@ import { MangaDetailComponent } from '../manga-detail/manga-detail';
 })
 export class MangaSearchComponent {
   searchQuery = signal('');
-  searchResults = signal<any[]>([]);
+  searchResults = signal<Manga[]>([]);
   loading = signal(false);
   error = signal('');
   hasMore = signal(false);
   currentPage = signal(1);
-  selectedManga = signal<any>(null);
+  selectedManga = signal<Manga | null>(null);
   showDetails = signal(false);
 
   // Demo manga data for search fallback
@@ -121,14 +121,14 @@ export class MangaSearchComponent {
         
         if (externalResponse && externalResponse.data) {
           // Process MangaDx API response
-          const mangaList = externalResponse.data.map((manga: any) => ({
+          const mangaList = externalResponse.data.map((manga: Manga) => ({
             id: manga.id,
             title: manga.attributes?.title?.en || manga.attributes?.title?.jp || 'Unknown Title',
             description: manga.attributes?.description?.en || '',
             status: manga.attributes?.status || '',
-            tags: manga.attributes?.tags?.map((tag: any) => tag.attributes?.name?.en) || [],
-            author: manga.relationships?.find((rel: any) => rel.type === 'author')?.attributes?.name || 'Unknown',
-            cover_art: manga.relationships?.find((rel: any) => rel.type === 'cover_art')?.id || null
+            tags: manga.attributes?.tags?.map((tag: { attributes?: { name?: { en?: string } } }) => tag.attributes?.name?.en) || [],
+            author: manga.relationships?.find((rel: { type?: string; attributes?: { name?: string } }) => rel.type === 'author')?.attributes?.name || 'Unknown',
+            cover_art: manga.relationships?.find((rel: { type?: string; id?: string }) => rel.type === 'cover_art')?.id || null
           }));
           
           this.searchResults.set(mangaList);
@@ -141,7 +141,7 @@ export class MangaSearchComponent {
           this.fallbackToDemoSearch();
         }
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Search error:', error);
       console.log('API unavailable, falling back to demo data...');
       this.fallbackToDemoSearch();
@@ -212,7 +212,7 @@ export class MangaSearchComponent {
     }
   }
 
-  showMangaDetails(manga: any) {
+  showMangaDetails(manga: Manga) {
     // Navigate to manga detail page
     this.router.navigate(['/manga', manga.id], { state: { manga: manga } });
   }

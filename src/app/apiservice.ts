@@ -1,6 +1,8 @@
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
+import { Manga } from './interfaces/manga';
+import { ApiResponse } from './interfaces/manga';
 
 export interface LoginRequest {
   username: string;
@@ -32,7 +34,7 @@ export interface MangaSearchRequest {
 
 export interface MangaSearchResponse {
   success: boolean;
-  manga?: any[];
+  manga?: Manga[];
   total_count?: number;
   message?: string;
 }
@@ -68,7 +70,7 @@ export interface MangaSearchRequest {
 
 export interface MangaSearchResponse {
   success: boolean;
-  manga?: any[];
+  manga?: Manga[];
   total_count?: number;
   message?: string;
 }
@@ -108,8 +110,8 @@ export class Apiservice {
     });
   }
 
-  logout(): Observable<any> {
-    return this.http.post(`${this.baseUrl}/api/auth/logout`, {}, {
+  logout(): Observable<{ success: boolean; message?: string }> {
+    return this.http.post<{ success: boolean; message?: string }>(`${this.baseUrl}/api/auth/logout`, {}, {
       headers: this.getAuthHeaders()
     });
   }
@@ -124,115 +126,115 @@ export class Apiservice {
     });
   }
 
-  semanticSearch(query: string): Observable<any> {
-    return this.http.post<any>(`${this.baseUrl}/api/manga/semantic-search`, { query }, {
+  semanticSearch(query: string): Observable<ApiResponse<Manga>> {
+    return this.http.post<ApiResponse<Manga>>(`${this.baseUrl}/api/manga/semantic-search`, { query }, {
       headers: this.getAuthHeaders()
     });
   }
 
-  searchExternalManga(query: string): Observable<any> {
-    return this.http.get(`${this.baseUrl}/api/manga?title=${encodeURIComponent(query)}`, {
+  searchExternalManga(query: string): Observable<ApiResponse<Manga>> {
+    return this.http.get<ApiResponse<Manga>>(`${this.baseUrl}/api/manga?title=${encodeURIComponent(query)}`, {
       headers: this.getAuthHeaders()
     });
   }
 
-  getMangaChapters(mangaId: string, chapter?: string, lang: string = 'en'): Observable<any> {
+  getMangaChapters(mangaId: string, chapter?: string, lang: string = 'en'): Observable<ApiResponse<Manga>> {
     let url = `${this.baseUrl}/api/manga/${mangaId}/chapters?translatedLanguage[]=${lang}`;
     if (chapter) {
       url += `&chapter=${encodeURIComponent(chapter)}`;
     }
-    return this.http.get(url, {
+    return this.http.get<ApiResponse<Manga>>(url, {
       headers: this.getAuthHeaders()
     });
   }
 
-  getChapterDownloadInfo(chapterId: string): Observable<any> {
-    return this.http.get(`${this.baseUrl}/api/manga/download?chapter_id=${chapterId}`, {
+  getChapterDownloadInfo(chapterId: string): Observable<{ url: string }> {
+    return this.http.get<{ url: string }>(`${this.baseUrl}/api/manga/download?chapter_id=${chapterId}`, {
       headers: this.getAuthHeaders()
     });
   }
 
-  getRecommendations(userId?: number): Observable<any> {
+  getRecommendations(userId?: number): Observable<ApiResponse<Manga>> {
     const url = userId 
       ? `${this.baseUrl}/api/recommendations?userId=${userId}`
       : `${this.baseUrl}/api/recommendations`;
-    return this.http.get(url, {
+    return this.http.get<ApiResponse<Manga>>(url, {
       headers: this.getAuthHeaders()
     });
   }
 
-  getUserProfile(): Observable<any> {
-    return this.http.get(`${this.baseUrl}/api/user/profile`, {
+  getUserProfile(): Observable<{ user: { id: string; username: string; email: string } }> {
+    return this.http.get<{ user: { id: string; username: string; email: string } }>(`${this.baseUrl}/api/user/profile`, {
       headers: this.getAuthHeaders()
     });
   }
 
-  updateUserProfile(profileData: any): Observable<any> {
-    return this.http.put(`${this.baseUrl}/api/user/profile`, profileData, {
+  updateUserProfile(profileData: { username?: string; email?: string; password?: string }): Observable<{ success: boolean; message?: string }> {
+    return this.http.put<{ success: boolean; message?: string }>(`${this.baseUrl}/api/user/profile`, profileData, {
       headers: this.getAuthHeaders()
     });
   }
 
-  getUserLibrary(): Observable<any> {
-    return this.http.get(`${this.baseUrl}/api/library`, {
+  getUserLibrary(): Observable<{ manga: Manga[] }> {
+    return this.http.get<{ manga: Manga[] }>(`${this.baseUrl}/api/library`, {
       headers: this.getAuthHeaders()
     });
   }
 
-  getLibraryStats(): Observable<any> {
-    return this.http.get(`${this.baseUrl}/api/library/stats`, {
+  getLibraryStats(): Observable<{ totalManga: number; currentlyReading: number; completed: number; planToRead: number }> {
+    return this.http.get<{ totalManga: number; currentlyReading: number; completed: number; planToRead: number }>(`${this.baseUrl}/api/library/stats`, {
       headers: this.getAuthHeaders()
     });
   }
 
-  addMangaToLibrary(mangaData: any): Observable<any> {
-    return this.http.post(`${this.baseUrl}/api/library`, mangaData, {
+  addMangaToLibrary(mangaData: Manga): Observable<{ success: boolean; message?: string }> {
+    return this.http.post<{ success: boolean; message?: string }>(`${this.baseUrl}/api/library`, mangaData, {
       headers: this.getAuthHeaders()
     });
   }
 
-  updateMangaProgress(mangaId: string, progressData: any): Observable<any> {
-    return this.http.put(`${this.baseUrl}/api/library/${mangaId}/progress`, progressData, {
+  updateMangaProgress(mangaId: string, progressData: { chapter: string; page: number }): Observable<{ success: boolean; message?: string }> {
+    return this.http.put<{ success: boolean; message?: string }>(`${this.baseUrl}/api/library/${mangaId}/progress`, progressData, {
       headers: this.getAuthHeaders()
     });
   }
 
-  updateMangaStatus(mangaId: string, status: string): Observable<any> {
-    return this.http.put(`${this.baseUrl}/api/library/${mangaId}/status`, { status }, {
+  updateMangaStatus(mangaId: string, status: string): Observable<{ success: boolean; message?: string }> {
+    return this.http.put<{ success: boolean; message?: string }>(`${this.baseUrl}/api/library/${mangaId}/status`, { status }, {
       headers: this.getAuthHeaders()
     });
   }
 
-  toggleMangaFavorite(mangaId: string): Observable<any> {
-    return this.http.put(`${this.baseUrl}/api/library/${mangaId}/favorite`, {}, {
+  toggleMangaFavorite(mangaId: string): Observable<{ success: boolean; message?: string }> {
+    return this.http.put<{ success: boolean; message?: string }>(`${this.baseUrl}/api/library/${mangaId}/favorite`, {}, {
       headers: this.getAuthHeaders()
     });
   }
 
-  removeMangaFromLibrary(mangaId: string): Observable<any> {
-    return this.http.delete(`${this.baseUrl}/api/library/${mangaId}`, {
+  removeMangaFromLibrary(mangaId: string): Observable<{ success: boolean; message?: string }> {
+    return this.http.delete<{ success: boolean; message?: string }>(`${this.baseUrl}/api/library/${mangaId}`, {
       headers: this.getAuthHeaders()
     });
   }
 
-  updateMangaRating(mangaId: string, rating: number): Observable<any> {
-    return this.http.put(`${this.baseUrl}/api/library/${mangaId}/rating`, { rating }, {
+  updateMangaRating(mangaId: string, rating: number): Observable<{ success: boolean; message?: string }> {
+    return this.http.put<{ success: boolean; message?: string }>(`${this.baseUrl}/api/library/${mangaId}/rating`, { rating }, {
       headers: this.getAuthHeaders()
     });
   }
 
-  updateMangaNotes(mangaId: string, notes: string): Observable<any> {
-    return this.http.put(`${this.baseUrl}/api/library/${mangaId}/notes`, { notes }, {
+  updateMangaNotes(mangaId: string, notes: string): Observable<{ success: boolean; message?: string }> {
+    return this.http.put<{ success: boolean; message?: string }>(`${this.baseUrl}/api/library/${mangaId}/notes`, { notes }, {
       headers: this.getAuthHeaders()
     });
   }
 
-  getAllManga(): Observable<any> {
+  getAllManga(): Observable<{ manga: Manga[] }> {
     return this.getUserLibrary();
   }
 
-  healthCheck(): Observable<any> {
-    return this.http.get(`${this.baseUrl}`, {
+  healthCheck(): Observable<{ status: string }> {
+    return this.http.get<{ status: string }>(`${this.baseUrl}`, {
       headers: new HttpHeaders({ 'Content-Type': 'application/json' })
     });
   }
@@ -243,7 +245,7 @@ export class Apiservice {
     mangaTitle: string,
     chapterTitle: string,
     quality: 'high' | 'saver'
-  ): Observable<any> {
+  ): Observable<{ success: boolean; message?: string }> {
     const requestBody = {
       chapter_id: chapterId,
       save_path: savePath,
@@ -251,7 +253,7 @@ export class Apiservice {
       chapter_title: chapterTitle,
       quality: quality
     };
-    return this.http.post(`${this.baseUrl}/api/download-files`, requestBody, {
+    return this.http.post<{ success: boolean; message?: string }>(`${this.baseUrl}/api/download-files`, requestBody, {
       headers: this.getAuthHeaders()
     });
   }

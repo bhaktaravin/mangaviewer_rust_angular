@@ -1,21 +1,22 @@
 
+
 import { Component, signal } from '@angular/core';
 import { Router } from '@angular/router';
-import { CommonModule } from '@angular/common';
-import { AuthService } from '../auth.service';
+import { AuthService, User } from '../auth.service';
 import { Apiservice } from '../apiservice';
+import { Manga } from '../interfaces/manga';
 
 @Component({
   selector: 'app-home',
   standalone: true,
-  imports: [CommonModule],
+  imports: [],
   templateUrl: './home.html',
   styleUrl: './home.css'
 })
 export class HomeComponent {
   isAuthenticated = signal(false);
-  user = signal<any>(null);
-  recentManga = signal<any[]>([]);
+  user = signal<User | null>(null);
+  recentManga = signal<Manga[]>([]);
   stats = signal({
     totalManga: 0,
     currentlyReading: 0,
@@ -37,19 +38,29 @@ export class HomeComponent {
       }
     }
   }
-
   private loadUserData(): void {
     // Load recent manga
     this.apiService.getAllManga().subscribe({
-      next: (response: any) => {
+      next: (response: { manga: Manga[] }) => {
         if (response?.manga) {
+          const getLastUpdate = (m: Manga): string | undefined => {
+            if (m.attributes?.lastChapter) return m.attributes.lastChapter;
+            // If 'updated_at' exists on the object, use it
+            return (typeof (m as Record<string, unknown>)["updated_at"] === "string")
+              ? (m as Record<string, string>)["updated_at"]
+              : undefined;
+          };
           const sortedManga = response.manga
-            .sort((a: any, b: any) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime())
+            .toSorted((a: Manga, b: Manga) => {
+              const bDate = getLastUpdate(b);
+              const aDate = getLastUpdate(a);
+              return new Date(bDate ?? 0).getTime() - new Date(aDate ?? 0).getTime();
+            })
             .slice(0, 6);
           this.recentManga.set(sortedManga);
         }
       },
-      error: (error: any) => {
+      error: (error: unknown) => {
         console.error('Error loading recent manga:', error);
         this.recentManga.set([]);
       }
@@ -57,12 +68,12 @@ export class HomeComponent {
 
     // Load user statistics
     this.apiService.getLibraryStats().subscribe({
-      next: (response: any) => {
+      next: (response: { totalManga: number; currentlyReading: number; completed: number; planToRead: number }) => {
         if (response) {
           this.stats.set(response);
         }
       },
-      error: (error: any) => {
+      error: (error: unknown) => {
         console.error('Error loading stats:', error);
       }
     });
@@ -90,14 +101,12 @@ export class HomeComponent {
     this.isAuthenticated.set(false);
     this.user.set(null);
     this.recentManga.set([]);
-    this.stats.set({
-      totalManga: 0,
-      currentlyReading: 0,
-      completed: 0,
-      planToRead: 0
-    });
+      this.stats.set({
+        totalManga: 0,
+        currentlyReading: 0,
+        completed: 0,
+        planToRead: 0
+      });
+    }
   }
-}
-
-
 

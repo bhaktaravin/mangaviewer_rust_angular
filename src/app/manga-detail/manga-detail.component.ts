@@ -1,5 +1,5 @@
 import { Component, signal, OnInit } from '@angular/core';
-import { CommonModule } from '@angular/common';
+
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { Apiservice } from '../apiservice';
@@ -41,12 +41,12 @@ declare global {
 @Component({
   selector: 'app-manga-detail',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [FormsModule],
   templateUrl: './manga-detail.component.html',
   styleUrl: './manga-detail.component.css'
 })
 export class MangaDetailComponent implements OnInit {
-  manga = signal<any>(null);
+  manga = signal<Manga | null>(null);
   
   chapters = signal<Chapter[]>([]);
   loading = signal(false);
@@ -60,7 +60,7 @@ export class MangaDetailComponent implements OnInit {
     quality: 'high',
     mangaTitle: ''
   });
-  downloadProgress = signal<any>(null);
+  downloadProgress = signal<DownloadProgress | null>(null);
   downloading = signal(false);
   
   // Common download paths for quick selection
@@ -109,7 +109,7 @@ export class MangaDetailComponent implements OnInit {
     }
   }
 
-  private loadMangaById(mangaId: string) {
+  private loadMangaById() {
     // This would load manga details from API using the ID
     // For now, redirect back to search if no manga data
     this.router.navigate(['/search']);
@@ -142,11 +142,16 @@ export class MangaDetailComponent implements OnInit {
 
   closeDownloadModal() {
     this.showDownloadModal.set(false);
+    } catch (error: unknown) {
+      if ((error as { name?: string })?.name !== 'AbortError') {
+        console.error('Directory picker error:', error);
+        this.promptForCustomPath();
+      }
     this.selectedChapter.set(null);
     this.downloadProgress.set(null);
   }
 
-  updateDownloadSetting(field: keyof DownloadSettings, value: any) {
+  updateDownloadSetting(field: keyof DownloadSettings, value: string | 'high' | 'saver') {
     const settings = this.downloadSettings();
     this.downloadSettings.set({
       ...settings,
@@ -173,8 +178,8 @@ export class MangaDetailComponent implements OnInit {
         // Fallback: prompt user to enter path manually
         this.promptForCustomPath();
       }
-    } catch (error: any) {
-      if (error?.name !== 'AbortError') {
+    } catch (error: unknown) {
+      if ((error as { name?: string })?.name !== 'AbortError') {
         console.error('Directory picker error:', error);
         this.promptForCustomPath();
       }

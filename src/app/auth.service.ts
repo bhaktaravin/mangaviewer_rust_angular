@@ -59,18 +59,16 @@ export class AuthService {
         success: false, 
         error: response.message || 'Login failed. Please check your credentials.' 
       };
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Login error:', error);
-      
       // Handle HTTP error responses
-      if (error?.error?.message) {
+      if (isApiError(error)) {
         return { success: false, error: error.error.message };
-      } else if (error?.status === 401) {
+      } else if (isStatusError(error, 401)) {
         return { success: false, error: 'Invalid username or password.' };
-      } else if (error?.status === 500) {
+      } else if (isStatusError(error, 500)) {
         return { success: false, error: 'Server error. The login service is temporarily unavailable.' };
       }
-      
       return { 
         success: false, 
         error: 'Network error. Please check your connection and try again.' 
@@ -103,20 +101,35 @@ export class AuthService {
         success: false, 
         error: response.message || 'Registration failed. Please try again.' 
       };
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Registration error:', error);
-      
       // Handle HTTP error responses
-      if (error?.error?.message) {
+      if (isApiError(error)) {
         return { success: false, error: error.error.message };
-      } else if (error?.status === 500) {
+      } else if (isStatusError(error, 500)) {
         return { success: false, error: 'Server error. The registration service is temporarily unavailable.' };
-      } else if (error?.status === 400) {
+      } else if (isStatusError(error, 400)) {
         return { success: false, error: 'Invalid registration data. Please check your inputs.' };
-      } else if (error?.status === 409) {
+      } else if (isStatusError(error, 409)) {
         return { success: false, error: 'Username or email already exists.' };
       }
-      
+      function isApiError(error: unknown): error is { error: { message: string } } {
+        return (
+          typeof error === 'object' &&
+          error !== null &&
+          'error' in error &&
+          typeof (error as { error?: { message?: unknown } }).error?.message === 'string'
+        );
+      }
+
+      function isStatusError(error: unknown, status: number): error is { status: number } {
+        return (
+          typeof error === 'object' &&
+          error !== null &&
+          'status' in error &&
+          (typeof (error as { status?: unknown }).status === 'number' && (error as { status: number }).status === status)
+        );
+      }
       return { 
         success: false, 
         error: 'Network error. Please check your connection and try again.' 

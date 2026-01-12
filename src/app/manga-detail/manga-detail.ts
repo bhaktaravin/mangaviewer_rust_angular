@@ -47,7 +47,7 @@ declare global {
 })
 export class MangaDetailComponent implements OnInit {
     // Accept manga as an input for Angular binding
-    @Input() manga: any;
+    @Input() manga: Manga | null = null;
 
     chapters = signal<Chapter[]>([]);
     error = signal('');
@@ -63,7 +63,8 @@ export class MangaDetailComponent implements OnInit {
         quality: 'high',
         mangaTitle: ''
     });
-    downloadProgress = signal<any>(null);
+    downloadProgress = signal<DownloadProgress | null>(null);
+      downloadProgress = signal<DownloadProgress | null>(null);
     downloading = signal(false);
 
     // Common download paths for quick selection
@@ -112,7 +113,7 @@ export class MangaDetailComponent implements OnInit {
     }
   }
 
-  private loadMangaById(mangaId: string) {
+  private loadMangaById() {
     // This would load manga details from API using the ID
     // For now, redirect back to search if no manga data
     this.router.navigate(['/search']);
@@ -131,7 +132,7 @@ export class MangaDetailComponent implements OnInit {
         this.error.set('No chapters found for this manga');
       }
     } catch (error) {
-      console.error('Error loading chapters:', error);
+        console.error('Error loading chapters:', error as unknown);
       this.error.set('Failed to load chapters');
     } finally {
       this.loading.set(false);
@@ -149,7 +150,7 @@ export class MangaDetailComponent implements OnInit {
     this.downloadProgress.set(null);
   }
 
-  updateDownloadSetting(field: keyof DownloadSettings, value: any) {
+    updateDownloadSetting(field: keyof DownloadSettings, value: string | 'high' | 'saver') {
     const settings = this.downloadSettings();
     this.downloadSettings.set({
       ...settings,
@@ -168,7 +169,7 @@ export class MangaDetailComponent implements OnInit {
   // Modern browser directory picker (if supported)
   async openDirectoryPicker() {
     try {
-      // @ts-ignore: Element implicitly has an 'any' type because type 'typeof globalThis' has no index signature.
+      // @ts-expect-error: Element implicitly has an 'any' type because type 'typeof globalThis' has no index signature.
       const showDirectoryPicker = globalThis.showDirectoryPicker as (() => Promise<FileSystemDirectoryHandle>) | undefined;
       if (showDirectoryPicker) {
         const dirHandle = await showDirectoryPicker();
@@ -178,16 +179,17 @@ export class MangaDetailComponent implements OnInit {
         // Fallback: prompt user to enter path manually
         this.promptForCustomPath();
       }
-    } catch (error: any) {
-      if (error?.name !== 'AbortError') {
+    } catch (error: unknown) {
+      if ((error as { name?: string })?.name !== 'AbortError') {
         console.error('Directory picker error:', error);
         this.promptForCustomPath();
       }
     }
   }
 
+
   // Fallback method for custom path input
-  promptForCustomPath() {
+  private promptForCustomPath(): void {
     const customPath = prompt('Enter custom download path:', this.downloadSettings().savePath);
     if (customPath?.trim()) {
       this.updateDownloadSetting('savePath', customPath.trim());
