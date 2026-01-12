@@ -51,7 +51,6 @@ export class MangaDetailComponent implements OnInit {
   manga = signal<any>(null);
   
   chapters = signal<Chapter[]>([]);
-  loading = signal(false);
   error = signal('');
   
   // Download functionality
