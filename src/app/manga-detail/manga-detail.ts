@@ -1,4 +1,4 @@
-import { Component, signal, OnInit } from '@angular/core';
+import { Component, signal, OnInit, Input } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
@@ -48,7 +48,6 @@ declare global {
 export class MangaDetailComponent implements OnInit {
     // Accept manga as an input for Angular binding
     @Input() manga: any;
-  manga = signal<any>(null);
   
   chapters = signal<Chapter[]>([]);
   error = signal('');
