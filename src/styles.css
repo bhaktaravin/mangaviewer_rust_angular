@@ -34,23 +34,7 @@
   --button-bg: var(--bg-secondary);
 }
 
-/* Dark theme */
-[data-theme="dark"] {
-  --bg-primary: #1a1a1a;
-  --bg-secondary: #2d2d2d;
-  --bg-tertiary: #404040;
-  --text-primary: #ffffff;
-  --text-secondary: #b0b0b0;
-  --text-muted: #808080;
-  --border-color: #404040;
-  --shadow: rgba(0, 0, 0, 0.3);
-  --shadow-hover: rgba(0, 0, 0, 0.4);
-  --brand-shadow: rgba(102, 126, 234, 0.2);
-  
-  --card-bg: var(--bg-secondary);
-  --input-bg: var(--bg-secondary);
-  --button-bg: var(--bg-tertiary);
-}
+/* Dark theme block removed (duplicate) */
 
 /* Global base styles */
 * {
@@ -75,9 +59,8 @@ body {
 .main-content {
   min-height: 100vh;
   background-color: var(--bg-primary);
-}
-/* Removed duplicate and misplaced CSS variable definitions */
-}
+  }
+  /* Removed duplicate and misplaced CSS variable definitions */
 
 /* Dark theme */
 [data-theme="dark"] {
