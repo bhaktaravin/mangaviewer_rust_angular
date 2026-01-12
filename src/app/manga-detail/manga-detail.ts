@@ -31,9 +31,9 @@ interface FileSystemDirectoryHandle extends FileSystemHandle {
   kind: 'directory';
 }
 
-// Extend Window interface for File System Access API
+// Extend globalThis interface for File System Access API
 declare global {
-  interface Window {
+  interface GlobalThis {
     showDirectoryPicker?: () => Promise<FileSystemDirectoryHandle>;
   }
 }
@@ -74,11 +74,11 @@ export class MangaDetailComponent implements OnInit {
   ];
   selectedCommonPath = signal<string>('');
 
-  constructor(
-    private apiService: Apiservice,
-    private route: ActivatedRoute,
-    private router: Router
-  ) {}
+    constructor(
+      private readonly apiService: Apiservice,
+      private readonly route: ActivatedRoute,
+      private readonly router: Router
+    ) {}
 
   ngOnInit() {
     // Get manga data from route state or load from API
@@ -120,9 +120,9 @@ export class MangaDetailComponent implements OnInit {
     this.error.set('');
 
     try {
-      const response = await this.apiService.getMangaChapters(this.manga().id).toPromise();
+      const response = await this.apiService.getMangaChapters(this.manga()?.id).toPromise();
       
-      if (response && response.data) {
+      if (response?.data) {
         this.chapters.set(response.data);
       } else {
         this.error.set('No chapters found for this manga');
@@ -165,8 +165,10 @@ export class MangaDetailComponent implements OnInit {
   // Modern browser directory picker (if supported)
   async openDirectoryPicker() {
     try {
-      if (window.showDirectoryPicker) {
-        const dirHandle = await window.showDirectoryPicker();
+      // @ts-ignore: Element implicitly has an 'any' type because type 'typeof globalThis' has no index signature.
+      const showDirectoryPicker = globalThis.showDirectoryPicker as (() => Promise<FileSystemDirectoryHandle>) | undefined;
+      if (showDirectoryPicker) {
+        const dirHandle = await showDirectoryPicker();
         this.updateDownloadSetting('savePath', dirHandle.name);
         this.selectedCommonPath.set('custom');
       } else {
@@ -184,7 +186,7 @@ export class MangaDetailComponent implements OnInit {
   // Fallback method for custom path input
   promptForCustomPath() {
     const customPath = prompt('Enter custom download path:', this.downloadSettings().savePath);
-    if (customPath && customPath.trim()) {
+    if (customPath?.trim()) {
       this.updateDownloadSetting('savePath', customPath.trim());
       this.selectedCommonPath.set('custom');
     }
@@ -209,7 +211,11 @@ export class MangaDetailComponent implements OnInit {
 
     try {
       const chapterTitle = chapter.attributes.title || `Chapter_${chapter.attributes.chapter}`;
-      
+      // Ensure downloadFiles exists on apiService
+      if (typeof this.apiService.downloadFiles !== 'function') {
+        this.error.set('Download not supported. Method missing on Apiservice.');
+        return;
+      }
       const response = await this.apiService.downloadFiles(
         chapter.id,
         settings.savePath,
@@ -218,7 +224,7 @@ export class MangaDetailComponent implements OnInit {
         settings.quality
       ).toPromise();
 
-      if (response && response.success) {
+      if (response?.success) {
         this.downloadProgress.set(response);
       } else {
         this.error.set(response?.error || 'Download failed');
@@ -248,8 +254,12 @@ export class MangaDetailComponent implements OnInit {
     if (!settings.savePath || !chapter) return '';
     
     const chapterTitle = chapter.attributes.title || `Chapter_${chapter.attributes.chapter}`;
-    const sanitizedTitle = chapterTitle.replace(/[/\\:*?"<>|]/g, '');
-    
+    // Use replaceAll for best practice
+    let sanitizedTitle = chapterTitle;
+    ["/", "\\", ":", "*", "?", '"', "<", ">", "|"]
+      .forEach(char => {
+        sanitizedTitle = sanitizedTitle.replaceAll(char, "");
+      });
     return `${settings.savePath}/${settings.mangaTitle}/${sanitizedTitle}/`;
   }
 }
