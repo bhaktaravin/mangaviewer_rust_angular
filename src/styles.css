@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 /* Global styles and theme variables */
 
 :root {
@@ -76,3 +77,83 @@ body {
   min-height: 100vh;
   background-color: var(--bg-primary);
 }
+=======
+/* Global styles and theme variables */
+
+:root {
+  /* Light theme colors */
+  --bg-primary: #ffffff;
+  --bg-secondary: #f8f9fa;
+  --bg-tertiary: #e9ecef;
+  --text-primary: #212529;
+  --text-secondary: #6c757d;
+  --text-muted: #adb5bd;
+  --border-color: #dee2e6;
+  --shadow: rgba(0, 0, 0, 0.1);
+  --shadow-hover: rgba(0, 0, 0, 0.15);
+  
+  /* Brand colors (same for both themes) */
+  --brand-primary: #764ba2;
+  --brand-secondary: #667eea;
+  --brand-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  
+  /* Status colors */
+  --success: #28a745;
+  --warning: #ffc107;
+  --danger: #dc3545;
+  --info: #17a2b8;
+  --error-color: #dc3545;
+  --error-hover: #c82333;
+  --brand-shadow: rgba(102, 126, 234, 0.4);
+  
+  /* Card and component styles */
+  --card-bg: var(--bg-primary);
+  --card-border: var(--border-color);
+  --input-bg: var(--bg-primary);
+  --input-border: var(--border-color);
+  --button-bg: var(--bg-secondary);
+}
+
+/* Dark theme */
+[data-theme="dark"] {
+  --bg-primary: #1a1a1a;
+  --bg-secondary: #2d2d2d;
+  --bg-tertiary: #404040;
+  --text-primary: #ffffff;
+  --text-secondary: #b0b0b0;
+  --text-muted: #808080;
+  --border-color: #404040;
+  --shadow: rgba(0, 0, 0, 0.3);
+  --shadow-hover: rgba(0, 0, 0, 0.4);
+  --brand-shadow: rgba(102, 126, 234, 0.2);
+  
+  --card-bg: var(--bg-secondary);
+  --input-bg: var(--bg-secondary);
+  --button-bg: var(--bg-tertiary);
+}
+
+/* Global base styles */
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+/* Smooth transitions for theme changes */
+* {
+  transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease;
+}
+
+/* Main content area */
+.main-content {
+  min-height: 100vh;
+  background-color: var(--bg-primary);
+}
+>>>>>>> server

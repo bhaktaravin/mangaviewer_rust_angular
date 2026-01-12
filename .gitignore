@@ -1,8 +1,27 @@
+<<<<<<< HEAD
+=======
+
+/target
+
+# Environment variables
+.env
+.env.local
+.env.*.local
+
+>>>>>>> server
 # See https://docs.github.com/get-started/getting-started-with-git/ignoring-files for more about ignoring files.
 
 # Compiled output
 /dist
 /tmp
+ 
+/target
+
+# Environment variables
+.env
+.env.local
+.env.*.local
+
 /out-tsc
 /bazel-out
 

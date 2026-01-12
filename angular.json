@@ -17,6 +17,7 @@
             "polyfills": [
               "zone.js"
             ],
+>>>>>>> server
             "tsConfig": "tsconfig.app.json",
             "assets": [
               {
@@ -40,6 +41,9 @@
                   "type": "anyComponentStyle",
                   "maximumWarning": "12kB",
                   "maximumError": "24kB"
+                  "maximumWarning": "4kB",
+                  "maximumError": "8kB"
+>>>>>>> server
                 }
               ],
               "outputHashing": "all"
@@ -74,6 +78,7 @@
               "zone.js",
               "zone.js/testing"
             ],
+>>>>>>> server
             "tsConfig": "tsconfig.spec.json",
             "assets": [
               {
@@ -90,6 +95,8 @@
     }
   },
   "cli": {
-    "analytics": false
+  "analytics": false
+    "analytics": "ee2bdb22-87cc-4e50-aa00-52b56f97cfff"
+>>>>>>> server
   }
 }

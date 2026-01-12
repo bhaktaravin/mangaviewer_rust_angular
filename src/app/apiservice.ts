@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
@@ -37,95 +38,104 @@ export interface MangaSearchResponse {
   message?: string;
 }
 
+=======
+import { HttpClient } from '@angular/common/http';
+import { Injectable } from '@angular/core';
+import { ApiResponse } from './interfaces/manga'; // Adjust the import path as necessary
+>>>>>>> server
 @Injectable({
   providedIn: 'root'
 })
 export class Apiservice {
+<<<<<<< HEAD
   // Use local development server if available, fallback to production
   private baseUrl = this.getBaseUrl();
   
   constructor(private http: HttpClient) { }
 
   private getBaseUrl(): string {
-    // Use localhost for development, fallback to production
-    if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
-      return 'http://localhost:3000';
+    // ...existing code...
+    private baseUrl = this.getBaseUrl();
+    constructor(private http: HttpClient) { }
+
+    private getBaseUrl(): string {
+      if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+        return 'http://localhost:3000';
+      }
+      return 'https://api-nameless-haze-4648.fly.dev';
     }
-    return 'https://api-nameless-haze-4648.fly.dev';
-  }
 
-  private getAuthHeaders(): HttpHeaders {
-    const token = localStorage.getItem('authToken');
-    return new HttpHeaders({
-      'Content-Type': 'application/json',
-      ...(token && { 'Authorization': `Bearer ${token}` })
-    });
-  }
-
-  // Authentication endpoints
-  login(credentials: LoginRequest): Observable<AuthResponse> {
-    return this.http.post<AuthResponse>(`${this.baseUrl}/api/auth/login`, credentials, {
-      headers: this.getAuthHeaders()
-    });
-  }
-
-  register(userData: RegisterRequest): Observable<AuthResponse> {
-    return this.http.post<AuthResponse>(`${this.baseUrl}/api/auth/register`, userData, {
-      headers: this.getAuthHeaders()
-    });
-  }
-
-  logout(): Observable<any> {
-    return this.http.post(`${this.baseUrl}/api/auth/logout`, {}, {
-      headers: this.getAuthHeaders()
-    });
-  }
-
-  // Manga search endpoint (local database)
-  searchManga(searchParams: MangaSearchRequest): Observable<MangaSearchResponse> {
-    const params = new URLSearchParams();
-    params.append('q', searchParams.query); // Use 'q' parameter as expected by backend
-    if (searchParams.page) params.append('page', searchParams.page.toString());
-    if (searchParams.limit) params.append('limit', searchParams.limit.toString());
-
-    return this.http.get<MangaSearchResponse>(`${this.baseUrl}/api/manga/search?${params.toString()}`, {
-      headers: this.getAuthHeaders()
-    });
-  }
-
-  // External manga search (MangaDx API)
-  searchExternalManga(query: string): Observable<any> {
-    return this.http.get(`${this.baseUrl}/api/manga?title=${encodeURIComponent(query)}`, {
-      headers: this.getAuthHeaders()
-    });
-  }
-
-  // Get chapters for a specific manga
-  getMangaChapters(mangaId: string, chapter?: string, lang: string = 'en'): Observable<any> {
-    let url = `${this.baseUrl}/api/manga/${mangaId}/chapters?translatedLanguage[]=${lang}`;
-    if (chapter) {
-      url += `&chapter=${encodeURIComponent(chapter)}`;
+    private getAuthHeaders(): HttpHeaders {
+      const token = localStorage.getItem('authToken');
+      return new HttpHeaders({
+        'Content-Type': 'application/json',
+        ...(token && { 'Authorization': `Bearer ${token}` })
+      });
     }
-    return this.http.get(url, {
-      headers: this.getAuthHeaders()
-    });
-  }
 
-  // Get download info for a chapter
-  getChapterDownloadInfo(chapterId: string): Observable<any> {
-    return this.http.get(`${this.baseUrl}/api/manga/download?chapter_id=${chapterId}`, {
-      headers: this.getAuthHeaders()
-    });
-  }
-
-  // Download files to custom location
-  downloadFiles(chapterId: string, savePath: string, mangaTitle?: string, chapterTitle?: string, quality: string = 'high'): Observable<any> {
-    let url = `${this.baseUrl}/api/manga/download-files?chapter_id=${chapterId}&save_path=${encodeURIComponent(savePath)}&quality=${quality}`;
-    if (mangaTitle) {
-      url += `&manga_title=${encodeURIComponent(mangaTitle)}`;
+    // Authentication endpoints
+    login(credentials: LoginRequest): Observable<AuthResponse> {
+      return this.http.post<AuthResponse>(`${this.baseUrl}/api/auth/login`, credentials, {
+        headers: this.getAuthHeaders()
+      });
     }
-    if (chapterTitle) {
-      url += `&chapter_title=${encodeURIComponent(chapterTitle)}`;
+
+    register(userData: RegisterRequest): Observable<AuthResponse> {
+      return this.http.post<AuthResponse>(`${this.baseUrl}/api/auth/register`, userData, {
+        headers: this.getAuthHeaders()
+      });
+    }
+
+    logout(): Observable<any> {
+      return this.http.post(`${this.baseUrl}/api/auth/logout`, {}, {
+        headers: this.getAuthHeaders()
+      });
+    }
+
+    // Manga search endpoint (local database)
+    searchManga(searchParams: MangaSearchRequest): Observable<MangaSearchResponse> {
+      const params = new URLSearchParams();
+      params.append('q', searchParams.query);
+      if (searchParams.page) params.append('page', searchParams.page.toString());
+      if (searchParams.limit) params.append('limit', searchParams.limit.toString());
+      return this.http.get<MangaSearchResponse>(`${this.baseUrl}/api/manga/search?${params.toString()}`, {
+        headers: this.getAuthHeaders()
+      });
+    }
+
+    // Semantic search endpoint
+    semanticSearch(query: string): Observable<any> {
+      return this.http.post<any>(`${this.baseUrl}/api/manga/semantic-search`, { query }, {
+        headers: this.getAuthHeaders()
+      });
+    }
+
+    // External manga search (MangaDx API)
+    searchExternalManga(query: string): Observable<any> {
+      return this.http.get(`${this.baseUrl}/api/manga?title=${encodeURIComponent(query)}`, {
+        headers: this.getAuthHeaders()
+      });
+    }
+
+    // Get chapters for a specific manga
+    getMangaChapters(mangaId: string, chapter?: string, lang: string = 'en'): Observable<any> {
+      let url = `${this.baseUrl}/api/manga/${mangaId}/chapters?translatedLanguage[]=${lang}`;
+      if (chapter) {
+        url += `&chapter=${encodeURIComponent(chapter)}`;
+      }
+      return this.http.get(url, {
+        headers: this.getAuthHeaders()
+      });
+    }
+
+    // Get download info for a chapter
+    getChapterDownloadInfo(chapterId: string): Observable<any> {
+      return this.http.get(`${this.baseUrl}/api/manga/download?chapter_id=${chapterId}`, {
+        headers: this.getAuthHeaders()
+      });
+    }
+
+    // ...existing code...
     }
     return this.http.get(url, {
       headers: this.getAuthHeaders()
@@ -250,4 +260,30 @@ export class Apiservice {
       headers: this.getAuthHeaders()
     });
   }
+=======
+
+  private apiUrl = 'https://mangaviewer-rust-angular.onrender.com'; 
+
+  constructor(private http: HttpClient) { }
+
+  getRoot(){
+    return this.http.get<ApiResponse<any>>(`${this.apiUrl}/`);
+  }
+
+  getAllManga(limit: number = 10, offset: number = 0) {
+    return this.http.get<ApiResponse<any>>(`${this.apiUrl}/manga`);
+  }
+
+  getCoverArt(coverId: string) {
+    return this.http.get<any>(`https://api.mangadex.org/cover/${coverId}`);
+  }
+  
+
+  semanticSearch(query: string) {
+    return this.http.get<ApiResponse<any>>(`${this.apiUrl}/semantic_search?query=${encodeURIComponent(query)}`);
+  }
+
+
+
+>>>>>>> server
 }

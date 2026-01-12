@@ -5,7 +5,10 @@
     "ng": "ng",
     "start": "ng serve",
     "build": "ng build",
+<<<<<<< HEAD
     "vercel-build": "npx ng build --configuration production",
+=======
+>>>>>>> server
     "watch": "ng build --watch --configuration development",
     "test": "ng test"
   },
@@ -28,8 +31,12 @@
     "@angular/platform-browser": "^20.1.0",
     "@angular/router": "^20.1.0",
     "rxjs": "~7.8.0",
+<<<<<<< HEAD
     "tslib": "^2.3.0",
     "zone.js": "~0.15.0"
+=======
+    "tslib": "^2.3.0"
+>>>>>>> server
   },
   "devDependencies": {
     "@angular/build": "^20.1.0",
