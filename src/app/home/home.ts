@@ -11,65 +11,67 @@ import { Manga, MangaAttributes, ApiResponse  } from '../interfaces/manga';
 export class Home {
 
   mangaList: any[] = [];
-  coverId: any;
-  coverFileName: string = '';
+  searchQuery: string = '';
+  loading: boolean = false;
+  debounceTimeout: any;
 
   constructor(private apiService: Apiservice) { }
 
-
-
   ngOnInit() {
     this.getAllData();
-
-    
   }
 
-  /**
-   * Fetches all manga data from the API and updates the mangaList.
-   */
-  getAllData(){
-    this.apiService.getAllManga().subscribe(response => {
-      console.log('Manga list:', response);
-      this.mangaList = response.data;
+  getAllData() {
+    this.loading = true;
+    this.apiService.getAllManga().subscribe(
+      response => {
+        this.mangaList = response.data;
+        this.loading = false;
+      },
+      error => {
+        this.mangaList = [];
+        this.loading = false;
+      }
+    );
+  }
 
-      //Use the Cover Get Method to fetch cover images
-      this.coverId = this.getCoverId(this.mangaList[0]);
-      console.log('Cover Image:', this.coverId);
+  onSearchChange(query: string) {
+    clearTimeout(this.debounceTimeout);
+    this.searchQuery = query;
+    if (!query) {
+      this.getAllData();
+      return;
+    }
+    this.debounceTimeout = setTimeout(() => {
+      this.searchManga(query);
+    }, 400);
+  }
 
-      console.log('Cover File Name:', this.getCoverFileName(this.coverId));
-      
-    }, error => {
-      console.error('Error fetching manga list:', error);
-      this.mangaList = [];
-    });
+  searchManga(query: string) {
+    this.loading = true;
+    this.apiService.semanticSearch(query).subscribe(
+      response => {
+        this.mangaList = response.data;
+        this.loading = false;
+      },
+      error => {
+        this.mangaList = [];
+        this.loading = false;
+      }
+    );
   }
 
   getEnglishTitle(manga: Manga): string {
     return manga.attributes.title['en'] || '[No English Title]';
   }
+
   getEnglishDescription(manga: Manga): string {
-  return manga.attributes.description['en']?.slice(0, 150) || '[No description]';
-}
+    return manga.attributes.description['en']?.slice(0, 150) || '[No description]';
+  }
 
-getCoverId(manga: Manga): any {
-  const coverId = manga.relationships.find(rel => rel.type === 'cover_art')?.id;
-  return coverId;
-}
-
-getCoverFileName(coverId: string) {
-  const coverFileName = this.apiService.getCoverArt(coverId).subscribe(response => {
-    console.log('Cover File Name:', response);
-    // Assuming the response contains the cover file name
-    console.log('FileName: ', response.data.attributes['fileName'])
-    response = response.data.attributes['fileName'];
-
-    return response;
-  }, error => {
-    console.error('Error fetching cover file name:', error);
-    return null;
-  });
-  return coverFileName;
-}
+  getCoverId(manga: Manga): any {
+    return manga.relationships.find(rel => rel.type === 'cover_art')?.id;
+  }
 
 }
 

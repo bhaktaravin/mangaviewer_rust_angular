@@ -23,6 +23,10 @@ export class Apiservice {
   }
   
 
+  semanticSearch(query: string) {
+    return this.http.get<ApiResponse<any>>(`${this.apiUrl}/semantic_search?query=${encodeURIComponent(query)}`);
+  }
+
 
 
 }

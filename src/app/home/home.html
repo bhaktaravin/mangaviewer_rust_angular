@@ -1,11 +1,32 @@
-<h1>Manga Viewer and Downloader</h1>
+<div class="search-container">
+  <input
+    type="text"
+    [(ngModel)]="searchQuery"
+    (ngModelChange)="onSearchChange($event)"
+    placeholder="Search manga..."
+    class="search-bar"
+  />
+</div>
+
+<div *ngIf="loading" class="loading-indicator">
+  <span class="spinner"></span> Searching...
+</div>
+
+<div *ngIf="!loading && mangaList.length === 0 && searchQuery" class="no-results">
+  <p>No manga found for "{{ searchQuery }}"</p>
+</div>
 
 <div class="card-grid">
   @for (manga of mangaList; track manga.id) {
     <div class="manga-card">
-        <p>{{ manga.id }}</p>
-        <!-- Use Functions to Get Cover Id and Cover Image-->
-        <img [src]="'https://uploads.mangadex.org/covers/' + manga.id + '/' + getCoverId(manga) + '.jpg'" alt="{{ manga.attributes.title['en'] }}" />
+      <img
+        class="cover"
+        [src]="'https://uploads.mangadex.org/covers/' + manga.id + '/' + getCoverId(manga) + '.jpg'"
+        alt="{{ getEnglishTitle(manga) }}"
+      />
+      <h2>{{ getEnglishTitle(manga) }}</h2>
+      <p>{{ getEnglishDescription(manga) }}</p>
     </div>
   }
+</div>
 
