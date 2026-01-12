@@ -76,13 +76,7 @@ body {
   min-height: 100vh;
   background-color: var(--bg-primary);
 }
-=======
-/* Global styles and theme variables */
-
-:root {
-  /* Light theme colors */
-  --bg-primary: #ffffff;
-  --bg-secondary: #f8f9fa;
+/* Removed merge marker and duplicate code */
   --bg-tertiary: #e9ecef;
   --text-primary: #212529;
   --text-secondary: #6c757d;
