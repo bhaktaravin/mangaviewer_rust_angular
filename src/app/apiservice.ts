@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
@@ -38,9 +37,6 @@ export interface MangaSearchResponse {
   message?: string;
 }
 
-import { HttpClient, HttpHeaders } from '@angular/common/http';
-import { Injectable } from '@angular/core';
-import { Observable } from 'rxjs';
 
 export interface LoginRequest {
   username: string;
@@ -259,11 +255,4 @@ export class Apiservice {
       headers: this.getAuthHeaders()
     });
   }
-}
-    return this.http.get<ApiResponse<any>>(`${this.apiUrl}/semantic_search?query=${encodeURIComponent(query)}`);
-  }
-
-
-
->>>>>>> server
 }

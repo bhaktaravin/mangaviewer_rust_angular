@@ -48,31 +48,34 @@ declare global {
 export class MangaDetailComponent implements OnInit {
     // Accept manga as an input for Angular binding
     @Input() manga: any;
-  
-  chapters = signal<Chapter[]>([]);
-  error = signal('');
-  
-  // Download functionality
-  showDownloadModal = signal(false);
-  selectedChapter = signal<Chapter | null>(null);
-  downloadSettings = signal<DownloadSettings>({
-    savePath: '/home/ravin/Downloads/manga',
-    quality: 'high',
-    mangaTitle: ''
-  });
-  downloadProgress = signal<any>(null);
-  downloading = signal(false);
-  
-  // Common download paths for quick selection
-  commonPaths = [
-    { label: '🏠 Home/Downloads', path: '/home/ravin/Downloads/manga' },
-    { label: '💻 Desktop', path: '/home/ravin/Desktop/manga' },
-    { label: '📁 Documents', path: '/home/ravin/Documents/manga' },
-    { label: '📚 Manga Library', path: '/home/ravin/manga_library' },
-    { label: '⬇️ Temporary Downloads', path: '/tmp/manga_downloads' },
-    { label: '✏️ Custom Location', path: 'custom' }
-  ];
-  selectedCommonPath = signal<string>('');
+
+    chapters = signal<Chapter[]>([]);
+    error = signal('');
+
+    // Loading state for async operations
+    loading = signal(false);
+
+    // Download functionality
+    showDownloadModal = signal(false);
+    selectedChapter = signal<Chapter | null>(null);
+    downloadSettings = signal<DownloadSettings>({
+        savePath: '/home/ravin/Downloads/manga',
+        quality: 'high',
+        mangaTitle: ''
+    });
+    downloadProgress = signal<any>(null);
+    downloading = signal(false);
+
+    // Common download paths for quick selection
+    commonPaths = [
+        { label: '🏠 Home/Downloads', path: '/home/ravin/Downloads/manga' },
+        { label: '💻 Desktop', path: '/home/ravin/Desktop/manga' },
+        { label: '📁 Documents', path: '/home/ravin/Documents/manga' },
+        { label: '📚 Manga Library', path: '/home/ravin/manga_library' },
+        { label: '⬇️ Temporary Downloads', path: '/tmp/manga_downloads' },
+        { label: '✏️ Custom Location', path: 'custom' }
+    ];
+    selectedCommonPath = signal<string>('');
 
     constructor(
       private readonly apiService: Apiservice,
