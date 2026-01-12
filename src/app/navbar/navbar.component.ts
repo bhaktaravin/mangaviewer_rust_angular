@@ -9,7 +9,7 @@ import { ThemeService } from '../theme.service';
   standalone: true,
   imports: [CommonModule, RouterModule],
   template: `
-    <nav class="navbar" id="test-navbar-marker">
+    <nav class="navbar" id="test-navbar-marker" data-test="navbar">
       <div class="navbar-container">
         <!-- Logo -->
         <a routerLink="/" class="navbar-brand">
