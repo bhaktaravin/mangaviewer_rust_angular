@@ -19,9 +19,23 @@ use serde_json;
 
 mod auth_mongodb;
 mod manga_service;
+mod ai_service;
 
 use auth_mongodb::{AuthService, login_handler, register_handler, logout_handler};
-use manga_service::{MangaService, save_manga_handler, get_manga_handler, list_manga_handler, search_manga_handler};
+use manga_service::{MangaService, save_manga_handler, get_manga_handler, list_manga_handler, search_manga_handler, semantic_search_handler};
+use ai_service::AIService;
+// --- ADMIN ENDPOINT ---
+use axum::extract::State;
+async fn update_embeddings_admin_handler(
+    State(manga_service): State<MangaService>,
+    State(ai_service): State<AIService>,
+) -> impl IntoResponse {
+    let model = std::env::var("OLLAMA_MODEL").unwrap_or_else(|_| "llama2".to_string());
+    match manga_service.update_all_manga_embeddings(&ai_service, &model).await {
+        Ok(_) => (StatusCode::OK, "Embeddings updated for all manga"),
+        Err(e) => (StatusCode::INTERNAL_SERVER_ERROR, format!("Failed to update embeddings: {}", e)),
+    }
+}
 
 #[derive(Deserialize)]
 struct MangaQuery {
@@ -308,6 +322,20 @@ async fn main() {
         }
     };
 
+    // --- Automatic embedding update on server start ---
+    let ai_service = match AIService::new() {
+        Ok(service) => service,
+        Err(e) => {
+            eprintln!("❌ Failed to initialize AIService: {}", e);
+            std::process::exit(1);
+        }
+    };
+    let model = std::env::var("OLLAMA_MODEL").unwrap_or_else(|_| "llama2".to_string());
+    match manga_service.update_all_manga_embeddings(&ai_service, &model).await {
+        Ok(_) => println!("✅ Embeddings updated for all manga on startup"),
+        Err(e) => println!("⚠️  Failed to update embeddings on startup: {}", e),
+    }
+
     let cors = CorsLayer::new()
         .allow_origin(tower_http::cors::Any)
         .allow_methods([Method::GET, Method::POST, Method::OPTIONS])
@@ -324,7 +352,14 @@ async fn main() {
         .route("/api/manga/:manga_id", get(get_manga_handler))
         .route("/api/manga/list", get(list_manga_handler))
         .route("/api/manga/search", get(search_manga_handler))
-        .with_state(manga_service);
+        .route("/api/manga/semantic-search", post(semantic_search_handler))
+        .with_state(manga_service.clone())
+        .with_state(ai_service.clone());
+
+    let admin_routes = Router::new()
+        .route("/api/admin/update-embeddings", post(update_embeddings_admin_handler))
+        .with_state(manga_service.clone())
+        .with_state(ai_service.clone());
 
     let app = Router::new()
         .route("/", get(root_handler))
@@ -334,6 +369,7 @@ async fn main() {
         .route("/api/manga/download-files", get(download_files_handler))
         .merge(auth_routes)
         .merge(manga_routes)
+        .merge(admin_routes)
         .layer(cors);
 
     let addr = SocketAddr::from(([0, 0, 0, 0], 3000));

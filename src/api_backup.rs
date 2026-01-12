@@ -39,6 +39,7 @@ pub struct MangaData {
     #[serde(rename = "type")]
     pub item_type: String,
     pub attributes: MangaAttributes,
+    pub embedding: Option<Vec<f32>>, // Semantic embedding for search
     // pub relationships: Vec<serde_json::Value>, // Using Value for simplicity if not detailing further
 }
 

@@ -1,3 +1,64 @@
+    use axum::Json;
+    use serde_json::json;
+    use crate::ai_service::AIService;
+    /// Semantic search handler: POST /api/manga/semantic-search
+    pub async fn semantic_search_handler(
+        State(manga_service): State<MangaService>,
+        State(ai_service): State<AIService>,
+        Json(payload): Json<serde_json::Value>,
+    ) -> Json<serde_json::Value> {
+        let query = payload["query"].as_str().unwrap_or("");
+        let model = std::env::var("OLLAMA_MODEL").unwrap_or_else(|_| "llama2".to_string());
+        let query_embedding = match ai_service.embed_with_ollama(query, &model).await {
+            Ok(e) => e,
+            Err(e) => return Json(json!({"error": format!("Failed to embed query: {}", e)})),
+        };
+        let collection = manga_service.manga_collection();
+        let mut cursor = match collection.find(doc! {"embedding": {"$exists": true}}).await {
+            Ok(c) => c,
+            Err(e) => return Json(json!({"error": format!("Failed to fetch manga: {}", e)})),
+        };
+        let mut results = Vec::new();
+        while cursor.advance().await.unwrap_or(false) {
+            let manga = cursor.deserialize_current().unwrap();
+            if let Some(embedding) = manga.embedding {
+                let score = cosine_similarity(&query_embedding, &embedding);
+                results.push(json!({
+                    "manga_id": manga.manga_id,
+                    "title": manga.title,
+                    "description": manga.description,
+                    "score": score
+                }));
+            }
+        }
+        // Sort by score descending and return top 10
+        results.sort_by(|a, b| b["score"].as_f64().partial_cmp(&a["score"].as_f64()).unwrap_or(std::cmp::Ordering::Equal));
+        Json(json!({"results": results.into_iter().take(10).collect::<Vec<_>>() }))
+    }
+
+    fn cosine_similarity(a: &Vec<f32>, b: &Vec<f32>) -> f32 {
+        let dot: f32 = a.iter().zip(b.iter()).map(|(x, y)| x * y).sum();
+        let norm_a = a.iter().map(|x| x * x).sum::<f32>().sqrt();
+        let norm_b = b.iter().map(|x| x * x).sum::<f32>().sqrt();
+        if norm_a == 0.0 || norm_b == 0.0 { 0.0 } else { dot / (norm_a * norm_b) }
+    }
+    /// Update embeddings for all manga in the database using Ollama
+    pub async fn update_all_manga_embeddings(&self, ai_service: &crate::ai_service::AIService, model: &str) -> Result<(), Box<dyn std::error::Error>> {
+        let collection = self.manga_collection();
+        let mut cursor = collection.find(doc! {}).await?;
+        while cursor.advance().await? {
+            let mut manga = cursor.deserialize_current()?;
+            let text = format!("{} {}", manga.title.clone().unwrap_or_default(), manga.description.clone().unwrap_or_default());
+            let embedding = ai_service.embed_with_ollama(&text, model).await?;
+            // Update the embedding field in the document
+            collection.update_one(
+                doc! { "_id": &manga.id },
+                doc! { "$set": { "embedding": &embedding } },
+                None
+            ).await?;
+        }
+        Ok(())
+    }
 use mongodb::{Database, Client, Collection};
 use mongodb::bson::{doc, oid::ObjectId};
 use serde::{Deserialize, Serialize};

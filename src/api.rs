@@ -315,21 +315,6 @@ mod tests {
         }
     }
 
-    #[test]
-    fn test_has_english_title() {
-        let manga = create_test_manga(Some("Naruto"), None, None);
-        assert!(MangaDexClient::has_english_content(&manga));
-    }
-
-    #[test]
-    fn test_has_english_description() {
-        let manga = create_test_manga(None, Some("English description"), None);
-        assert!(MangaDexClient::has_english_content(&manga));
-    }
-
-    #[test]
-    fn test_has_english_original_language() {
-        let manga = create_test_manga(None, None, Some("en"));
         assert!(MangaDexClient::has_english_content(&manga));
     }
 

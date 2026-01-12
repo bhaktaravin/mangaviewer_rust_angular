@@ -7,6 +7,16 @@ use std::fs;
 use crate::api::{MangaData, MangaDexClientError};
 
 #[derive(Debug, Serialize)]
+struct CohereEmbedRequest {
+    texts: Vec<String>,
+}
+
+#[derive(Debug, Deserialize)]
+struct CohereEmbedResponse {
+    embeddings: Vec<Vec<f32>>,
+}
+
+#[derive(Debug, Serialize)]
 struct OpenAIRequest {
     model: String,
     messages: Vec<OpenAIMessage>,
@@ -53,6 +63,8 @@ pub struct MangaSummary {
 pub struct AIService {
     client: Client,
     api_key: String,
+    cohere_key: String,
+    ollama_url: String,
 }
 
 impl AIService {
@@ -66,7 +78,71 @@ impl AIService {
             .build()
             .map_err(|e| format!("Failed to build HTTP client: {}", e))?;
 
-        Ok(AIService { client, api_key })
+        let cohere_key = env::var("COHERE_API_KEY").map_err(|_| "COHERE_API_KEY not found".to_string())?;
+        let ollama_url = env::var("OLLAMA_URL").unwrap_or_else(|_| "http://localhost:11434".to_string());
+
+        Ok(AIService { client, api_key, cohere_key, ollama_url })
+    }
+        // Ollama embedding function
+        pub async fn embed_with_ollama(&self, text: &str, model: &str) -> Result<Vec<f32>, MangaDexClientError> {
+            #[derive(Serialize)]
+            struct OllamaEmbedRequest {
+                model: String,
+                prompt: String,
+            }
+            #[derive(Deserialize)]
+            struct OllamaEmbedResponse {
+                embedding: Vec<f32>,
+            }
+            let request = OllamaEmbedRequest {
+                model: model.to_string(),
+                prompt: text.to_string(),
+            };
+            let url = format!("{}/api/embeddings", self.ollama_url);
+            let response = self
+                .client
+                .post(&url)
+                .header("Content-Type", "application/json")
+                .json(&request)
+                .send()
+                .await
+                .map_err(|e| MangaDexClientError::Reqwest(e))?;
+
+            if !response.status().is_success() {
+                let error_text = response.text().await.unwrap_or_else(|_| "Unknown error".to_string());
+                return Err(MangaDexClientError::RequestFailed(format!("Ollama API error: {}", error_text)));
+            }
+
+            let ollama_response: OllamaEmbedResponse = response
+                .json()
+                .await
+                .map_err(|e| MangaDexClientError::RequestFailed(format!("Failed to parse Ollama response: {}", e)))?;
+
+            Ok(ollama_response.embedding)
+        }
+    pub async fn embed_with_cohere(&self, texts: Vec<String>) -> Result<Vec<Vec<f32>>, MangaDexClientError> {
+        let request = CohereEmbedRequest { texts };
+        let response = self
+            .client
+            .post("https://api.cohere.ai/v1/embed")
+            .header("Authorization", format!("Bearer {}", self.cohere_key))
+            .header("Content-Type", "application/json")
+            .json(&request)
+            .send()
+            .await
+            .map_err(|e| MangaDexClientError::Reqwest(e))?;
+
+        if !response.status().is_success() {
+            let error_text = response.text().await.unwrap_or_else(|_| "Unknown error".to_string());
+            return Err(MangaDexClientError::RequestFailed(format!("Cohere API error: {}", error_text)));
+        }
+
+        let cohere_response: CohereEmbedResponse = response
+            .json()
+            .await
+            .map_err(|e| MangaDexClientError::RequestFailed(format!("Failed to parse Cohere response: {}", e)))?;
+
+        Ok(cohere_response.embeddings)
     }
 
     fn read_api_key_from_file() -> Result<String, String> {
