@@ -58,50 +58,24 @@
       <div class="manga-grid">
         @for (manga of searchResults(); track $index) {
           <div class="manga-card">
-            @if (manga.cover_image || manga.thumbnail) {
-              <div class="manga-image">
-                <img 
-                  [src]="manga.cover_image || manga.thumbnail" 
-                  [alt]="manga.title || manga.name"
-                  loading="lazy"
-                  onerror="this.src='https://via.placeholder.com/150x200?text=No+Image'"
-                />
-              </div>
-            } @else {
-              <div class="manga-image placeholder">
-                <span class="placeholder-text">📚</span>
-              </div>
-            }
+            <div class="manga-image placeholder">
+              <span class="placeholder-text">📚</span>
+            </div>
             
             <div class="manga-info">
-              <h4 class="manga-title">{{ manga.title || manga.name || 'Unknown Title' }}</h4>
+              <h4 class="manga-title">{{ manga.attributes?.title?.['en'] || 'Unknown Title' }}</h4>
               
-              @if (manga.author || manga.authors) {
-                <p class="manga-author">
-                  <span class="label">Author:</span>
-                  {{ manga.author || manga.authors }}
-                </p>
-              }
-              
-              @if (manga.genre || manga.genres) {
-                <p class="manga-genre">
-                  <span class="label">Genre:</span>
-                  {{ manga.genre || manga.genres }}
-                </p>
-              }
-              
-              @if (manga.description) {
-                <p class="manga-description">
-                  {{ manga.description.length > 100 ? (manga.description | slice:0:100) + '...' : manga.description }}
-                </p>
-              }
-              
-              @if (manga.rating || manga.score) {
-                <div class="manga-rating">
-                  <span class="rating-label">Rating:</span>
-                  <span class="rating-value">{{ manga.rating || manga.score }}/10</span>
-                </div>
-              }
+              <p class="manga-author">
+                <span class="label">Author:</span>
+                Unknown
+              </p>
+              <p class="manga-genre">
+                <span class="label">Genre:</span>
+                Unknown
+              </p>
+              <p class="manga-description">
+                {{ (manga.attributes?.description?.['en'] && manga.attributes?.description?.['en'].length > 100) ? (manga.attributes?.description?.['en'] | slice:0:100) + '...' : manga.attributes?.description?.['en'] || '' }}
+              </p>
               
               <div class="manga-actions">
                 <button 

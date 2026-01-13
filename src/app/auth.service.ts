@@ -1,7 +1,27 @@
+
 import { Injectable, signal } from '@angular/core';
 import { Router } from '@angular/router';
 import { Apiservice, LoginRequest, RegisterRequest } from './apiservice';
 import { firstValueFrom } from 'rxjs';
+
+// Utility type guards for error handling
+function isApiError(error: unknown): error is { error: { message: string } } {
+  return (
+    typeof error === 'object' &&
+    error !== null &&
+    'error' in error &&
+    typeof (error as { error?: { message?: unknown } }).error?.message === 'string'
+  );
+}
+
+function isStatusError(error: unknown, status: number): error is { status: number } {
+  return (
+    typeof error === 'object' &&
+    error !== null &&
+    'status' in error &&
+    (typeof (error as { status?: unknown }).status === 'number' && (error as { status: number }).status === status)
+  );
+}
 
 export interface User {
   id: string;  // Changed from number to string to match Rust backend

@@ -1,10 +1,9 @@
-import { Component, signal, OnInit } from '@angular/core';
+import { Component, signal, OnInit, Input } from '@angular/core';
+import { Manga } from '../interfaces/manga';
+import { firstValueFrom } from 'rxjs';
 
-import { FormsModule } from '@angular/forms';
-import { ActivatedRoute, Router } from '@angular/router';
-import { Apiservice } from '../apiservice';
-
-interface Chapter {
+// Exported Chapter interface (single declaration)
+export interface Chapter {
   id: string;
   attributes: {
     volume: string | null;
@@ -15,6 +14,19 @@ interface Chapter {
     publishAt: string;
   };
 }
+
+// Exported DownloadProgress interface (single declaration)
+export interface DownloadProgress {
+  progress: number;
+  status: string;
+  error?: string;
+  message?: string;
+}
+
+import { FormsModule } from '@angular/forms';
+import { ActivatedRoute, Router } from '@angular/router';
+import { Apiservice } from '../apiservice';
+
 
 interface DownloadSettings {
   savePath: string;
@@ -46,12 +58,12 @@ declare global {
   styleUrl: './manga-detail.component.css'
 })
 export class MangaDetailComponent implements OnInit {
-  manga = signal<Manga | null>(null);
-  
+  @Input() manga: Manga | null = null;
+
   chapters = signal<Chapter[]>([]);
   loading = signal(false);
   error = signal('');
-  
+
   // Download functionality
   showDownloadModal = signal(false);
   selectedChapter = signal<Chapter | null>(null);
@@ -62,7 +74,7 @@ export class MangaDetailComponent implements OnInit {
   });
   downloadProgress = signal<DownloadProgress | null>(null);
   downloading = signal(false);
-  
+
   // Common download paths for quick selection
   commonPaths = [
     { label: '🏠 Home/Downloads', path: '/home/ravin/Downloads/manga' },
@@ -75,38 +87,35 @@ export class MangaDetailComponent implements OnInit {
   selectedCommonPath = signal<string>('');
 
   constructor(
-    private apiService: Apiservice,
-    private route: ActivatedRoute,
-    private router: Router
+    private readonly apiService: Apiservice,
+    private readonly route: ActivatedRoute,
+    private readonly router: Router
   ) {}
 
   ngOnInit() {
     // Get manga data from route state or load from API
+    // Deprecated: getCurrentNavigation() is deprecated, but used for compatibility
     const navigation = this.router.getCurrentNavigation();
     if (navigation?.extras.state?.['manga']) {
-      this.manga.set(navigation.extras.state['manga']);
+      this.manga = navigation.extras.state['manga'];
       this.initializeManga();
     } else {
       // Fallback: try to get manga ID from route params and load from API
       const mangaId = this.route.snapshot.paramMap.get('id');
       if (mangaId) {
-        this.loadMangaById(mangaId);
+        this.loadMangaById();
       }
     }
   }
 
   private initializeManga() {
-    const mangaData = this.manga();
-    if (mangaData) {
-      this.loadChapters();
-      this.downloadSettings.set({
-        ...this.downloadSettings(),
-        mangaTitle: mangaData.title || mangaData.name || 'Unknown'
-      });
-      
-      // Set default path
-      this.selectedCommonPath.set('/home/ravin/Downloads/manga');
-    }
+    this.loadChapters();
+    this.downloadSettings.set({
+      ...this.downloadSettings(),
+      mangaTitle: this.manga?.attributes?.title?.['en'] || this.manga?.attributes?.title?.['jp'] || 'Unknown'
+    });
+    // Set default path
+    this.selectedCommonPath.set('/home/ravin/Downloads/manga');
   }
 
   private loadMangaById() {
@@ -118,14 +127,16 @@ export class MangaDetailComponent implements OnInit {
   async loadChapters() {
     this.loading.set(true);
     this.error.set('');
-
     try {
-      const response = await this.apiService.getMangaChapters(this.manga().id).toPromise();
-      
-      if (response && response.data) {
+      if (!this.manga) {
+        this.error.set('No manga loaded');
+        return;
+      }
+      const response = await firstValueFrom(this.apiService.getMangaChapters(this.manga.id));
+      if (response?.data) {
+        // If response.data is Manga[], map to Chapter[] if needed
+        // But if API is fixed to return Chapter[], just assign
         this.chapters.set(response.data);
-      } else {
-        this.error.set('No chapters found for this manga');
       }
     } catch (error) {
       console.error('Error loading chapters:', error);
@@ -142,16 +153,11 @@ export class MangaDetailComponent implements OnInit {
 
   closeDownloadModal() {
     this.showDownloadModal.set(false);
-    } catch (error: unknown) {
-      if ((error as { name?: string })?.name !== 'AbortError') {
-        console.error('Directory picker error:', error);
-        this.promptForCustomPath();
-      }
     this.selectedChapter.set(null);
     this.downloadProgress.set(null);
   }
 
-  updateDownloadSetting(field: keyof DownloadSettings, value: string | 'high' | 'saver') {
+  updateDownloadSetting(field: keyof DownloadSettings, value: string) {
     const settings = this.downloadSettings();
     this.downloadSettings.set({
       ...settings,
@@ -170,8 +176,9 @@ export class MangaDetailComponent implements OnInit {
   // Modern browser directory picker (if supported)
   async openDirectoryPicker() {
     try {
-      if (window.showDirectoryPicker) {
-        const dirHandle = await window.showDirectoryPicker();
+      const win = globalThis as unknown as Window;
+      if (typeof win.showDirectoryPicker === 'function') {
+        const dirHandle = await win.showDirectoryPicker();
         this.updateDownloadSetting('savePath', dirHandle.name);
         this.selectedCommonPath.set('custom');
       } else {
@@ -186,10 +193,9 @@ export class MangaDetailComponent implements OnInit {
     }
   }
 
-  // Fallback method for custom path input
   promptForCustomPath() {
     const customPath = prompt('Enter custom download path:', this.downloadSettings().savePath);
-    if (customPath && customPath.trim()) {
+    if (customPath?.trim()) {
       this.updateDownloadSetting('savePath', customPath.trim());
       this.selectedCommonPath.set('custom');
     }
@@ -203,30 +209,25 @@ export class MangaDetailComponent implements OnInit {
   async downloadChapter() {
     const chapter = this.selectedChapter();
     const settings = this.downloadSettings();
-    
     if (!chapter || !this.isValidPath(settings.savePath)) {
       this.error.set('Please provide a valid save path');
       return;
     }
-
     this.downloading.set(true);
     this.error.set('');
-
     try {
       const chapterTitle = chapter.attributes.title || `Chapter_${chapter.attributes.chapter}`;
-      
-      const response = await this.apiService.downloadFiles(
+      const response = await firstValueFrom(this.apiService.downloadFiles(
         chapter.id,
         settings.savePath,
         settings.mangaTitle,
         chapterTitle,
         settings.quality
-      ).toPromise();
-
-      if (response && response.success) {
-        this.downloadProgress.set(response);
+      ));
+      if (response && typeof response === 'object' && 'progress' in response && 'status' in response) {
+        this.downloadProgress.set(response as DownloadProgress);
       } else {
-        this.error.set(response?.error || 'Download failed');
+        this.error.set((response as any)?.error || (response as any)?.message || 'Download failed');
       }
     } catch (error) {
       console.error('Download error:', error);
@@ -249,16 +250,16 @@ export class MangaDetailComponent implements OnInit {
   getPathPreview(): string {
     const settings = this.downloadSettings();
     const chapter = this.selectedChapter();
-    
     if (!settings.savePath || !chapter) return '';
-    
     const chapterTitle = chapter.attributes.title || `Chapter_${chapter.attributes.chapter}`;
-    const sanitizedTitle = chapterTitle.replace(/[/\\:*?"<>|]/g, '');
-    
+    let sanitizedTitle = chapterTitle;
+    const forbiddenChars = ['/', '\\', ':', '*', '?', '"', '<', '>', '|'];
+    for (const char of forbiddenChars) {
+      sanitizedTitle = sanitizedTitle.replaceAll(char, '');
+    }
     return `${settings.savePath}/${settings.mangaTitle}/${sanitizedTitle}/`;
   }
 
-  // Track chapters for *ngFor performance
   chapterTracker(index: number, chapter: Chapter): string {
     return chapter.id;
   }

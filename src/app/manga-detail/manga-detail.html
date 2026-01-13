@@ -2,81 +2,50 @@
   <!-- Manga Info Header -->
   <div class="manga-header">
     <div class="manga-cover">
-      @if (manga().cover_image || manga().thumbnail) {
-        <img 
-          [src]="manga().cover_image || manga().thumbnail" 
-          [alt]="manga().title || manga().name"
-          onerror="this.src='https://via.placeholder.com/200x300?text=No+Image'"
-        />
-      } @else {
-        <div class="placeholder-cover">
-          <span class="placeholder-text">📚</span>
-        </div>
-      }
+      <!-- No cover_image/thumbnail in Manga, so fallback to placeholder always -->
+      <div class="placeholder-cover">
+        <span class="placeholder-text">📚</span>
+      </div>
     </div>
     
     <div class="manga-info">
-      <h1 class="manga-title">{{ manga().title || manga().name || 'Unknown Title' }}</h1>
+      <h1 class="manga-title">{{ manga?.attributes?.title?.['en'] || manga?.attributes?.title?.['jp'] || 'Unknown Title' }}</h1>
       
-      @if (manga().author || manga().authors) {
-        <p class="manga-author">
-          <strong>Author:</strong> {{ manga().author || manga().authors }}
-        </p>
-      }
-      
-      @if (manga().status) {
+      <!-- Author is in relationships, not a direct property. Omit for now or show 'Unknown' -->
+      <p class="manga-author"><strong>Author:</strong> Unknown</p>
+      <ng-container *ngIf="manga?.attributes?.status">
         <p class="manga-status">
-          <strong>Status:</strong> 
-          <span class="status-badge" [class]="manga().status">
-            {{ manga().status | titlecase }}
+          <strong>Status:</strong>
+          <span class="status-badge" [class]="manga?.attributes?.status">
+            {{ manga?.attributes?.status | titlecase }}
           </span>
         </p>
-      }
-      
-      @if (manga().description) {
-        <p class="manga-description">{{ manga().description }}</p>
-      }
-      
-      @if (manga().genre || manga().genres || manga().tags) {
-        <div class="manga-tags">
-          <strong>Tags:</strong>
-          <div class="tags-list">
-            @for (tag of (manga().tags || manga().genre?.split(',') || manga().genres?.split(',') || []); track $index) {
-              <span class="tag">{{ tag.trim() }}</span>
-            }
-          </div>
-        </div>
-      }
-    </div>
-  </div>
-
-  <!-- Chapters Section -->
-  <div class="chapters-section">
-    <div class="section-header">
-      <h2>📖 Chapters</h2>
-      @if (chapters().length > 0) {
-        <span class="chapter-count">{{ chapters().length }} chapters available</span>
-      }
+      </ng-container>
+      <ng-container *ngIf="manga?.attributes?.description?.['en']">
+        <p class="manga-description">{{ manga?.attributes?.description?.['en'] || '' }}</p>
+      </ng-container>
+      <!-- Tags/genres omitted: not present in Manga interface -->
+      <span class="chapter-count">{{ chapters.length }} chapters available</span>
     </div>
 
-    @if (loading()) {
+    @if (loading) {
       <div class="loading-state">
         <span class="spinner"></span>
         Loading chapters...
       </div>
     }
 
-    @if (error() && !loading()) {
+    @if (error && !loading) {
       <div class="error-message">
         <span class="error-icon">⚠️</span>
-        {{ error() }}
+        {{ error }}
         <button class="btn btn-small" (click)="loadChapters()">Retry</button>
       </div>
     }
 
-    @if (chapters().length > 0) {
+    @if (chapters.length > 0) {
       <div class="chapters-list">
-        @for (chapter of chapters(); track chapter.id) {
+        @for (chapter of chapters; track chapter.id) {
           <div class="chapter-item">
             <div class="chapter-info">
               <h4 class="chapter-title">{{ getChapterTitle(chapter) }}</h4>
@@ -108,28 +77,26 @@
   </div>
 
   <!-- Download Modal -->
-  @if (showDownloadModal()) {
+  @if (showDownloadModal) {
     <div class="modal-overlay" (click)="closeDownloadModal()">
       <div class="modal-content" (click)="$event.stopPropagation()">
         <div class="modal-header">
           <h3>💾 Download Chapter</h3>
           <button class="modal-close" (click)="closeDownloadModal()">×</button>
         </div>
-        
         <div class="modal-body">
-          @if (selectedChapter()) {
+          @if (selectedChapter) {
             <div class="download-info">
-              <h4>{{ getChapterTitle(selectedChapter()!) }}</h4>
-              <p>{{ selectedChapter()!.attributes.pages }} pages</p>
+              <h4>{{ getChapterTitle(selectedChapter) }}</h4>
+              <p>{{ selectedChapter.attributes.pages }} pages</p>
             </div>
           }
-          
           <div class="download-settings">
             <div class="setting-group">
               <label for="quickPaths">Quick Path Selection:</label>
               <select
                 id="quickPaths"
-                [ngModel]="selectedCommonPath()"
+                [ngModel]="selectedCommonPath"
                 (ngModelChange)="onCommonPathChange($event)"
                 class="setting-select"
               >
@@ -139,65 +106,22 @@
               </select>
               <small class="setting-help">Choose from common download locations</small>
             </div>
-
-            <div class="setting-group">
-              <label for="savePath">Save Location:</label>
-              <div class="path-input-group">
-                <input
-                  id="savePath"
-                  type="text"
-                  [ngModel]="downloadSettings().savePath"
-                  (ngModelChange)="updateDownloadSetting('savePath', $event)"
-                  placeholder="/path/to/download/folder"
-                  class="setting-input path-input"
-                  [class.invalid]="!isValidPath(downloadSettings().savePath)"
-                />
-                <button
-                  type="button"
-                  class="btn btn-outline btn-small browse-btn"
-                  (click)="openDirectoryPicker()"
-                  title="Browse for folder"
-                >
-                  📁 Browse
-                </button>
-                <button
-                  type="button"
-                  class="btn btn-outline btn-small"
-                  (click)="promptForCustomPath()"
-                  title="Enter custom path"
-                >
-                  ✏️ Custom
-                </button>
-              </div>
-              <small class="setting-help">
-                @if (!isValidPath(downloadSettings().savePath)) {
-                  <span class="error-text">⚠️ Please enter a valid download path</span>
-                } @else {
-                  <div class="path-preview">
-                    <strong>📁 Files will be saved to:</strong><br>
-                    <code class="save-path-display">{{ downloadSettings().savePath }}/{{ downloadSettings().mangaTitle }}/{{ getChapterTitle(selectedChapter()!) }}</code>
-                  </div>
-                }
-              </small>
-            </div>
-            
             <div class="setting-group">
               <label for="mangaTitle">Manga Title:</label>
               <input
                 id="mangaTitle"
                 type="text"
-                [ngModel]="downloadSettings().mangaTitle"
+                [ngModel]="downloadSettings.mangaTitle"
                 (ngModelChange)="updateDownloadSetting('mangaTitle', $event)"
                 class="setting-input"
               />
               <small class="setting-help">Used for folder organization</small>
             </div>
-            
             <div class="setting-group">
               <label for="quality">Quality:</label>
               <select
                 id="quality"
-                [ngModel]="downloadSettings().quality"
+                [ngModel]="downloadSettings.quality"
                 (ngModelChange)="updateDownloadSetting('quality', $event)"
                 class="setting-select"
               >
@@ -207,54 +131,39 @@
               <small class="setting-help">High quality uses more storage but better image quality</small>
             </div>
           </div>
-          
-          @if (downloadProgress()) {
+          @if (downloadProgress) {
             <div class="download-result">
               <div class="success-message">
                 <span class="success-icon">✅</span>
-                <strong>{{ downloadProgress().message }}</strong>
+                <strong>Download complete</strong>
               </div>
-              
               <div class="download-details">
-                <p><strong>Saved to:</strong> {{ downloadProgress().save_path }}</p>
-                <p><strong>Files downloaded:</strong> {{ downloadProgress().successful_downloads }}/{{ downloadProgress().total_pages }}</p>
-                
-                @if (downloadProgress().failed_downloads.length > 0) {
-                  <div class="failed-downloads">
-                    <p><strong>Failed downloads:</strong></p>
-                    <ul>
-                      @for (failure of downloadProgress().failed_downloads; track $index) {
-                        <li>{{ failure }}</li>
-                      }
-                    </ul>
-                  </div>
-                }
+                <p><strong>Status:</strong> {{ downloadProgress.status }}</p>
+                <p><strong>Progress:</strong> {{ downloadProgress.progress }}%</p>
               </div>
             </div>
           }
-          
-          @if (error()) {
+          @if (error) {
             <div class="error-message">
               <span class="error-icon">⚠️</span>
-              {{ error() }}
+              {{ error }}
             </div>
           }
         </div>
-        
         <div class="modal-footer">
           <button 
             class="btn btn-secondary" 
             (click)="closeDownloadModal()"
-            [disabled]="downloading()"
+            [disabled]="downloading"
           >
             Cancel
           </button>
           <button 
             class="btn btn-primary"
             (click)="downloadChapter()"
-            [disabled]="downloading() || !isValidPath(downloadSettings().savePath)"
+            [disabled]="downloading || !isValidPath(downloadSettings.savePath)"
           >
-            @if (downloading()) {
+            @if (downloading) {
               <span class="spinner"></span>
               Downloading...
             } @else {

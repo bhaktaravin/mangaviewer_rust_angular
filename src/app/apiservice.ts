@@ -1,8 +1,8 @@
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
-import { Manga } from './interfaces/manga';
-import { ApiResponse } from './interfaces/manga';
+import { Manga, ApiResponse } from './interfaces/manga';
+import { Chapter } from './manga-detail/manga-detail.component';
 
 export interface LoginRequest {
   username: string;
@@ -138,12 +138,12 @@ export class Apiservice {
     });
   }
 
-  getMangaChapters(mangaId: string, chapter?: string, lang: string = 'en'): Observable<ApiResponse<Manga>> {
+  getMangaChapters(mangaId: string, chapter?: string, lang: string = 'en'): Observable<ApiResponse<Chapter>> {
     let url = `${this.baseUrl}/api/manga/${mangaId}/chapters?translatedLanguage[]=${lang}`;
     if (chapter) {
       url += `&chapter=${encodeURIComponent(chapter)}`;
     }
-    return this.http.get<ApiResponse<Manga>>(url, {
+    return this.http.get<ApiResponse<Chapter>>(url, {
       headers: this.getAuthHeaders()
     });
   }

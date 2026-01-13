@@ -1,10 +1,12 @@
-import { Component, signal, OnInit, Input } from '@angular/core';
+import { Component, signal, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { Apiservice } from '../apiservice';
-
-interface Chapter {
+import { Manga } from '../interfaces/manga';
+import { firstValueFrom } from 'rxjs';
+// Required interfaces
+export interface Chapter {
   id: string;
   attributes: {
     volume: string | null;
@@ -16,18 +18,25 @@ interface Chapter {
   };
 }
 
-interface DownloadSettings {
+export interface DownloadProgress {
+  progress: number;
+  status: string;
+  error?: string;
+  message?: string;
+}
+
+export interface DownloadSettings {
   savePath: string;
   quality: 'high' | 'saver';
   mangaTitle: string;
 }
 
-interface FileSystemHandle {
+export interface FileSystemHandle {
   kind: 'file' | 'directory';
   name: string;
 }
 
-interface FileSystemDirectoryHandle extends FileSystemHandle {
+export interface FileSystemDirectoryHandle extends FileSystemHandle {
   kind: 'directory';
 }
 
@@ -46,137 +55,132 @@ declare global {
   styleUrl: './manga-detail.css'
 })
 export class MangaDetailComponent implements OnInit {
-    // Accept manga as an input for Angular binding
-    @Input() manga: Manga | null = null;
+  manga: Manga | null = null;
+  private readonly _chapters = signal<Chapter[]>([]);
+  private readonly _loading = signal(false);
+  private readonly _error = signal('');
+  private readonly _showDownloadModal = signal(false);
+  private readonly _selectedChapter = signal<Chapter | null>(null);
+  private readonly _downloadSettings = signal<DownloadSettings>({
+    savePath: '/home/ravin/Downloads/manga',
+    quality: 'high',
+    mangaTitle: ''
+  });
+  private readonly _downloadProgress = signal<DownloadProgress | null>(null);
+  private readonly _downloading = signal(false);
+  private readonly _selectedCommonPath = signal<string>('');
 
-    chapters = signal<Chapter[]>([]);
-    error = signal('');
+  commonPaths = [
+    { label: '🏠 Home/Downloads', path: '/home/ravin/Downloads/manga' },
+    { label: '💻 Desktop', path: '/home/ravin/Desktop/manga' },
+    { label: '📁 Documents', path: '/home/ravin/Documents/manga' },
+    { label: '📚 Manga Library', path: '/home/ravin/manga_library' },
+    { label: '⬇️ Temporary Downloads', path: '/tmp/manga_downloads' },
+    { label: '✏️ Custom Location', path: 'custom' }
+  ];
 
-    // Loading state for async operations
-    loading = signal(false);
+  constructor(
+    private readonly apiService: Apiservice,
+    private readonly route: ActivatedRoute,
+    private readonly router: Router
+  ) {}
 
-    // Download functionality
-    showDownloadModal = signal(false);
-    selectedChapter = signal<Chapter | null>(null);
-    downloadSettings = signal<DownloadSettings>({
-        savePath: '/home/ravin/Downloads/manga',
-        quality: 'high',
-        mangaTitle: ''
-    });
-    downloadProgress = signal<DownloadProgress | null>(null);
-      downloadProgress = signal<DownloadProgress | null>(null);
-    downloading = signal(false);
-
-    // Common download paths for quick selection
-    commonPaths = [
-        { label: '🏠 Home/Downloads', path: '/home/ravin/Downloads/manga' },
-        { label: '💻 Desktop', path: '/home/ravin/Desktop/manga' },
-        { label: '📁 Documents', path: '/home/ravin/Documents/manga' },
-        { label: '📚 Manga Library', path: '/home/ravin/manga_library' },
-        { label: '⬇️ Temporary Downloads', path: '/tmp/manga_downloads' },
-        { label: '✏️ Custom Location', path: 'custom' }
-    ];
-    selectedCommonPath = signal<string>('');
-
-    constructor(
-      private readonly apiService: Apiservice,
-      private readonly route: ActivatedRoute,
-      private readonly router: Router
-    ) {}
+  get chapters() { return this._chapters(); }
+  get loading() { return this._loading(); }
+  get error() { return this._error(); }
+  get showDownloadModal() { return this._showDownloadModal(); }
+  get selectedChapter() { return this._selectedChapter(); }
+  get downloadSettings() { return this._downloadSettings(); }
+  get downloadProgress() { return this._downloadProgress(); }
+  get downloading() { return this._downloading(); }
+  get selectedCommonPath() { return this._selectedCommonPath(); }
 
   ngOnInit() {
-    // Get manga data from route state or load from API
+    // Deprecated: getCurrentNavigation() is used for compatibility
     const navigation = this.router.getCurrentNavigation();
     if (navigation?.extras.state?.['manga']) {
-      this.manga.set(navigation.extras.state['manga']);
+      this.manga = navigation.extras.state['manga'];
       this.initializeManga();
     } else {
-      // Fallback: try to get manga ID from route params and load from API
       const mangaId = this.route.snapshot.paramMap.get('id');
       if (mangaId) {
-        this.loadMangaById(mangaId);
+        this.loadMangaById();
       }
     }
   }
 
   private initializeManga() {
-    const mangaData = this.manga();
+    const mangaData = this.manga;
     if (mangaData) {
       this.loadChapters();
-      this.downloadSettings.set({
-        ...this.downloadSettings(),
-        mangaTitle: mangaData.title || mangaData.name || 'Unknown'
+      this._downloadSettings.set({
+        ...this.downloadSettings,
+        mangaTitle: mangaData.attributes?.title?.['en'] || mangaData.attributes?.title?.['jp'] || 'Unknown'
       });
-      
-      // Set default path
-      this.selectedCommonPath.set('/home/ravin/Downloads/manga');
+      this._selectedCommonPath.set('/home/ravin/Downloads/manga');
     }
   }
 
   private loadMangaById() {
-    // This would load manga details from API using the ID
-    // For now, redirect back to search if no manga data
     this.router.navigate(['/search']);
   }
 
   async loadChapters() {
-    this.loading.set(true);
-    this.error.set('');
-
+    this._loading.set(true);
+    this._error.set('');
     try {
-      const response = await this.apiService.getMangaChapters(this.manga()?.id).toPromise();
-      
-      if (response?.data) {
-        this.chapters.set(response.data);
+      if (!this.manga) {
+        this._error.set('No manga loaded');
+        return;
+      }
+      const response = await firstValueFrom(this.apiService.getMangaChapters(this.manga.id));
+      if (response && Array.isArray(response.data)) {
+        this._chapters.set(response.data as Chapter[]);
       } else {
-        this.error.set('No chapters found for this manga');
+        this._error.set('No chapters found for this manga');
       }
     } catch (error) {
-        console.error('Error loading chapters:', error as unknown);
-      this.error.set('Failed to load chapters');
+      console.error('Error loading chapters:', error);
+      this._error.set('Failed to load chapters');
     } finally {
-      this.loading.set(false);
+      this._loading.set(false);
     }
   }
 
   openDownloadModal(chapter: Chapter) {
-    this.selectedChapter.set(chapter);
-    this.showDownloadModal.set(true);
+    this._selectedChapter.set(chapter);
+    this._showDownloadModal.set(true);
   }
 
   closeDownloadModal() {
-    this.showDownloadModal.set(false);
-    this.selectedChapter.set(null);
-    this.downloadProgress.set(null);
+    this._showDownloadModal.set(false);
+    this._selectedChapter.set(null);
+    this._downloadProgress.set(null);
   }
 
-    updateDownloadSetting(field: keyof DownloadSettings, value: string | 'high' | 'saver') {
-    const settings = this.downloadSettings();
-    this.downloadSettings.set({
+  updateDownloadSetting(field: keyof DownloadSettings, value: string) {
+    const settings = this.downloadSettings;
+    this._downloadSettings.set({
       ...settings,
       [field]: value
     });
   }
 
-  // Handle common path selection
   onCommonPathChange(selectedPath: string) {
-    this.selectedCommonPath.set(selectedPath);
+    this._selectedCommonPath.set(selectedPath);
     if (selectedPath !== 'custom') {
       this.updateDownloadSetting('savePath', selectedPath);
     }
   }
 
-  // Modern browser directory picker (if supported)
   async openDirectoryPicker() {
     try {
-      // @ts-expect-error: Element implicitly has an 'any' type because type 'typeof globalThis' has no index signature.
-      const showDirectoryPicker = globalThis.showDirectoryPicker as (() => Promise<FileSystemDirectoryHandle>) | undefined;
+      const showDirectoryPicker = (globalThis as any).showDirectoryPicker as (() => Promise<FileSystemDirectoryHandle>) | undefined;
       if (showDirectoryPicker) {
         const dirHandle = await showDirectoryPicker();
         this.updateDownloadSetting('savePath', dirHandle.name);
-        this.selectedCommonPath.set('custom');
+        this._selectedCommonPath.set('custom');
       } else {
-        // Fallback: prompt user to enter path manually
         this.promptForCustomPath();
       }
     } catch (error: unknown) {
@@ -187,62 +191,55 @@ export class MangaDetailComponent implements OnInit {
     }
   }
 
-
-  // Fallback method for custom path input
-  private promptForCustomPath(): void {
-    const customPath = prompt('Enter custom download path:', this.downloadSettings().savePath);
+  promptForCustomPath(): void {
+    const customPath = prompt('Enter custom download path:', this.downloadSettings.savePath);
     if (customPath?.trim()) {
       this.updateDownloadSetting('savePath', customPath.trim());
-      this.selectedCommonPath.set('custom');
+      this._selectedCommonPath.set('custom');
     }
   }
 
-  // Validate path
   isValidPath(path: string): boolean {
     return !!(path && path.trim().length > 0 && path !== 'custom');
   }
 
   async downloadChapter() {
-    const chapter = this.selectedChapter();
-    const settings = this.downloadSettings();
-    
+    const chapter = this.selectedChapter;
+    const settings = this.downloadSettings;
     if (!chapter || !this.isValidPath(settings.savePath)) {
-      this.error.set('Please provide a valid save path');
+      this._error.set('Please provide a valid save path');
       return;
     }
-
-    this.downloading.set(true);
-    this.error.set('');
-
+    this._downloading.set(true);
+    this._error.set('');
     try {
       const chapterTitle = chapter.attributes.title || `Chapter_${chapter.attributes.chapter}`;
-      // Ensure downloadFiles exists on apiService
       if (typeof this.apiService.downloadFiles !== 'function') {
-        this.error.set('Download not supported. Method missing on Apiservice.');
+        this._error.set('Download not supported. Method missing on Apiservice.');
         return;
       }
-      const response = await this.apiService.downloadFiles(
+      const response = await firstValueFrom(this.apiService.downloadFiles(
         chapter.id,
         settings.savePath,
         settings.mangaTitle,
         chapterTitle,
         settings.quality
-      ).toPromise();
-
+      ));
       if (response?.success) {
-        this.downloadProgress.set(response);
+        this._downloadProgress.set(response as any);
       } else {
-        this.error.set(response?.error || 'Download failed');
+        this._error.set((response as any)?.error || 'Download failed');
       }
     } catch (error) {
       console.error('Download error:', error);
-      this.error.set('Failed to download chapter');
+      this._error.set('Failed to download chapter');
     } finally {
-      this.downloading.set(false);
+      this._downloading.set(false);
     }
   }
 
   getChapterTitle(chapter: Chapter): string {
+    if (!chapter?.attributes) return '';
     const chapterNumber = chapter.attributes.chapter;
     const title = chapter.attributes.title;
     return title ? `Chapter ${chapterNumber}: ${title}` : `Chapter ${chapterNumber}`;
@@ -253,13 +250,10 @@ export class MangaDetailComponent implements OnInit {
   }
 
   getPathPreview(): string {
-    const settings = this.downloadSettings();
-    const chapter = this.selectedChapter();
-    
-    if (!settings.savePath || !chapter) return '';
-    
+    const settings = this.downloadSettings;
+    const chapter = this.selectedChapter;
+    if (!settings?.savePath || !chapter) return '';
     const chapterTitle = chapter.attributes.title || `Chapter_${chapter.attributes.chapter}`;
-    // Use replaceAll for best practice
     let sanitizedTitle = chapterTitle;
     ["/", "\\", ":", "*", "?", '"', "<", ">", "|"]
       .forEach(char => {
@@ -267,4 +261,4 @@ export class MangaDetailComponent implements OnInit {
       });
     return `${settings.savePath}/${settings.mangaTitle}/${sanitizedTitle}/`;
   }
-}
+  }

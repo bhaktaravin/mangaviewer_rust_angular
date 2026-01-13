@@ -13,6 +13,7 @@ import { Manga } from '../interfaces/manga';
   templateUrl: './home.html',
   styleUrl: './home.css'
 })
+
 export class HomeComponent {
   isAuthenticated = signal(false);
   user = signal<User | null>(null);
@@ -38,20 +39,22 @@ export class HomeComponent {
       }
     }
   }
+
   private loadUserData(): void {
     // Load recent manga
     this.apiService.getAllManga().subscribe({
       next: (response: { manga: Manga[] }) => {
         if (response?.manga) {
           const getLastUpdate = (m: Manga): string | undefined => {
+            // Use lastChapter as a proxy for last update if available
             if (m.attributes?.lastChapter) return m.attributes.lastChapter;
-            // If 'updated_at' exists on the object, use it
-            return (typeof (m as Record<string, unknown>)["updated_at"] === "string")
-              ? (m as Record<string, string>)["updated_at"]
-              : undefined;
+            // If 'updated_at' exists as a direct property, use it (ignore index signature)
+            // @ts-expect-error: updated_at may exist on some objects
+            if (typeof m["updated_at"] === "string") return m["updated_at"];
+            return undefined;
           };
-          const sortedManga = response.manga
-            .toSorted((a: Manga, b: Manga) => {
+          const sortedManga = [...response.manga]
+            .sort((a: Manga, b: Manga) => {
               const bDate = getLastUpdate(b);
               const aDate = getLastUpdate(a);
               return new Date(bDate ?? 0).getTime() - new Date(aDate ?? 0).getTime();
@@ -101,12 +104,12 @@ export class HomeComponent {
     this.isAuthenticated.set(false);
     this.user.set(null);
     this.recentManga.set([]);
-      this.stats.set({
-        totalManga: 0,
-        currentlyReading: 0,
-        completed: 0,
-        planToRead: 0
-      });
-    }
+    this.stats.set({
+      totalManga: 0,
+      currentlyReading: 0,
+      completed: 0,
+      planToRead: 0
+    });
   }
+}
 
