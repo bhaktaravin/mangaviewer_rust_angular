@@ -1,23 +1,23 @@
-use serde::{Deserialize, Serialize};
-use bcrypt::{hash, verify, DEFAULT_COST};
-use jsonwebtoken::{encode, decode, Header, Validation, EncodingKey, DecodingKey, Algorithm};
-use uuid::Uuid;
-use std::env;
-use mongodb::{Client, Collection, Database};
-use mongodb::bson::{doc, oid::ObjectId};
 use axum::{
-    extract::{State, Query},
-    response::{Json, IntoResponse},
-    http::{StatusCode, HeaderMap},
+    extract::{Query, State},
+    http::{HeaderMap, StatusCode},
+    response::{IntoResponse, Json},
 };
+use bcrypt::{hash, verify, DEFAULT_COST};
+use jsonwebtoken::{decode, encode, Algorithm, DecodingKey, EncodingKey, Header, Validation};
+use mongodb::bson::{doc, oid::ObjectId};
+use mongodb::{Client, Collection, Database};
+use serde::{Deserialize, Serialize};
+use std::env;
+use uuid::Uuid;
 
 // JWT Claims structure
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Claims {
-    pub sub: String,     // Subject (user ID)
+    pub sub: String, // Subject (user ID)
     pub username: String,
     pub email: String,
-    pub exp: usize,      // Expiration time
+    pub exp: usize, // Expiration time
 }
 
 // User data structures for MongoDB
@@ -25,7 +25,7 @@ pub struct Claims {
 pub struct User {
     #[serde(rename = "_id", skip_serializing_if = "Option::is_none")]
     pub id: Option<ObjectId>,
-    pub user_id: String,  // UUID as string
+    pub user_id: String, // UUID as string
     pub username: String,
     pub email: String,
     pub password_hash: String,
@@ -153,127 +153,140 @@ pub struct AuthService {
 
 impl AuthService {
     pub async fn new() -> Result<Self, Box<dyn std::error::Error>> {
-        let mongodb_uri = env::var("MONGODB_URI")
-            .map_err(|_| "MONGODB_URI environment variable not set")?;
-        let database_name = env::var("DATABASE_NAME")
-            .unwrap_or_else(|_| "mangaviewer".to_string());
+        let mongodb_uri =
+            env::var("MONGODB_URI").map_err(|_| "MONGODB_URI environment variable not set")?;
+        let database_name = env::var("DATABASE_NAME").unwrap_or_else(|_| "mangaviewer".to_string());
 
-        println!("🔗 Connecting to MongoDB...");
-        println!("📍 URI: {}", mongodb_uri.chars().take(20).collect::<String>() + "...");
-        println!("🗄️  Database: {}", database_name);
+        tracing::info!("🔗 Connecting to MongoDB...");
+        tracing::info!(
+            "📍 URI: {}",
+            mongodb_uri.chars().take(20).collect::<String>() + "..."
+        );
+        tracing::info!("🗄️  Database: {}", database_name);
 
-        let client = Client::with_uri_str(&mongodb_uri).await
-            .map_err(|e| {
-                println!("❌ Failed to create MongoDB client: {}", e);
-                e
-            })?;
+        let client = Client::with_uri_str(&mongodb_uri).await.map_err(|e| {
+            tracing::error!("❌ Failed to create MongoDB client: {}", e);
+            e
+        })?;
 
         // Test the connection
         match client.list_database_names().await {
             Ok(db_names) => {
-                println!("✅ Successfully connected to MongoDB");
-                println!("📋 Available databases: {:?}", db_names);
+                tracing::info!("✅ Successfully connected to MongoDB");
+                tracing::info!("📋 Available databases: {:?}", db_names);
             }
             Err(e) => {
-                println!("❌ Failed to connect to MongoDB: {}", e);
+                tracing::error!("❌ Failed to connect to MongoDB: {}", e);
                 return Err(Box::new(e));
             }
         }
 
         let database = client.database(&database_name);
-        println!("📚 Selected database: {}", database_name);
+        tracing::info!("📚 Selected database: {}", database_name);
 
-        let jwt_secret = env::var("JWT_SECRET")
-            .unwrap_or_else(|_| {
-                println!("⚠️  Warning: JWT_SECRET not set, using default (not secure for production)");
-                "default-secret-key".to_string()
-            });
+        let jwt_secret = env::var("JWT_SECRET").unwrap_or_else(|_| {
+            tracing::warn!(
+                "⚠️  Warning: JWT_SECRET not set, using default (not secure for production)"
+            );
+            "default-secret-key".to_string()
+        });
 
         // Create indexes for better performance and uniqueness
         let users_collection = database.collection::<User>("users");
-        println!("🔧 Creating database indexes...");
-        
+        tracing::info!("🔧 Creating database indexes...");
+
         // Create the AuthService temporarily to call the method
         let temp_service = AuthService {
             db: database.clone(),
             jwt_secret: jwt_secret.clone(),
         };
-        
+
         match temp_service.create_indexes().await {
-            Ok(_) => println!("✅ Database indexes created successfully"),
-            Err(e) => println!("⚠️  Warning: Failed to create indexes: {}", e),
+            Ok(_) => tracing::info!("✅ Database indexes created successfully"),
+            Err(e) => tracing::warn!("⚠️  Warning: Failed to create indexes: {}", e),
         }
 
-        println!("🚀 AuthService initialized successfully");
+        tracing::info!("🚀 AuthService initialized successfully");
 
         Ok(AuthService {
             db: database,
             jwt_secret,
         })
-    }    async fn create_indexes(&self) -> Result<(), Box<dyn std::error::Error>> {
+    }
+    async fn create_indexes(&self) -> Result<(), Box<dyn std::error::Error>> {
         let users = self.users_collection();
-        
-        // Create compound index for username and email (unique)
-        users.create_index(
-            mongodb::IndexModel::builder()
-                .keys(doc! { "username": 1 })
-                .options(
-                    mongodb::options::IndexOptions::builder()
-                        .unique(true)
-                        .name("username_unique".to_string())
-                        .build()
-                )
-                .build()
-        ).await?;
 
-        users.create_index(
-            mongodb::IndexModel::builder()
-                .keys(doc! { "email": 1 })
-                .options(
-                    mongodb::options::IndexOptions::builder()
-                        .unique(true)
-                        .name("email_unique".to_string())
-                        .build()
-                )
-                .build()
-        ).await?;
+        // Create compound index for username and email (unique)
+        users
+            .create_index(
+                mongodb::IndexModel::builder()
+                    .keys(doc! { "username": 1 })
+                    .options(
+                        mongodb::options::IndexOptions::builder()
+                            .unique(true)
+                            .name("username_unique".to_string())
+                            .build(),
+                    )
+                    .build(),
+            )
+            .await?;
+
+        users
+            .create_index(
+                mongodb::IndexModel::builder()
+                    .keys(doc! { "email": 1 })
+                    .options(
+                        mongodb::options::IndexOptions::builder()
+                            .unique(true)
+                            .name("email_unique".to_string())
+                            .build(),
+                    )
+                    .build(),
+            )
+            .await?;
 
         // Index for user_id for fast lookups
-        users.create_index(
-            mongodb::IndexModel::builder()
-                .keys(doc! { "user_id": 1 })
-                .options(
-                    mongodb::options::IndexOptions::builder()
-                        .unique(true)
-                        .name("user_id_unique".to_string())
-                        .build()
-                )
-                .build()
-        ).await?;
+        users
+            .create_index(
+                mongodb::IndexModel::builder()
+                    .keys(doc! { "user_id": 1 })
+                    .options(
+                        mongodb::options::IndexOptions::builder()
+                            .unique(true)
+                            .name("user_id_unique".to_string())
+                            .build(),
+                    )
+                    .build(),
+            )
+            .await?;
 
         // Index for admin queries
-        users.create_index(
-            mongodb::IndexModel::builder()
-                .keys(doc! { "is_admin": 1, "is_active": 1 })
-                .options(
-                    mongodb::options::IndexOptions::builder()
-                        .name("admin_active_index".to_string())
-                        .build()
-                )
-                .build()
-        ).await?;
+        users
+            .create_index(
+                mongodb::IndexModel::builder()
+                    .keys(doc! { "is_admin": 1, "is_active": 1 })
+                    .options(
+                        mongodb::options::IndexOptions::builder()
+                            .name("admin_active_index".to_string())
+                            .build(),
+                    )
+                    .build(),
+            )
+            .await?;
 
         // Index for created_at for sorting
-        users.create_index(
-            mongodb::IndexModel::builder()
-                .keys(doc! { "created_at": -1 })
-                .options(
-                    mongodb::options::IndexOptions::builder()
-                        .name("created_at_desc".to_string())
-                        .build()
-                )
-                .build()
-        ).await?;
+        users
+            .create_index(
+                mongodb::IndexModel::builder()
+                    .keys(doc! { "created_at": -1 })
+                    .options(
+                        mongodb::options::IndexOptions::builder()
+                            .name("created_at_desc".to_string())
+                            .build(),
+                    )
+                    .build(),
+            )
+            .await?;
 
         Ok(())
     }
@@ -282,23 +295,30 @@ impl AuthService {
         self.db.collection("users")
     }
 
-    pub async fn register(&self, req: RegisterRequest) -> Result<AuthResponse, Box<dyn std::error::Error>> {
+    pub async fn register(
+        &self,
+        req: RegisterRequest,
+    ) -> Result<AuthResponse, Box<dyn std::error::Error>> {
         let users = self.users_collection();
 
-        println!("🔍 Checking for existing user with username: {} or email: {}", req.username, req.email);
+        tracing::info!(
+            "🔍 Checking for existing user with username: {} or email: {}",
+            req.username,
+            req.email
+        );
 
         // Check if username or email already exists
-        let existing_user = users.find_one(
-            doc! {
+        let existing_user = users
+            .find_one(doc! {
                 "$or": [
                     {"username": &req.username},
                     {"email": &req.email}
                 ]
-            }
-        ).await?;
+            })
+            .await?;
 
         if let Some(existing) = existing_user {
-            println!("❌ Found existing user: {:?}", existing.username);
+            tracing::warn!("❌ Found existing user: {:?}", existing.username);
             return Ok(AuthResponse {
                 success: false,
                 user: None,
@@ -307,18 +327,23 @@ impl AuthService {
             });
         }
 
-        println!("✅ No existing user found, proceeding with registration");
+        tracing::info!("✅ No existing user found, proceeding with registration");
 
         // Debug: Let's see what users exist in the database
-        println!("🔍 Debug: Checking all users in database...");
+        tracing::debug!("🔍 Debug: Checking all users in database...");
         let mut cursor = users.find(doc! {}).await?;
         let mut user_count = 0;
         while cursor.advance().await? {
             let user = cursor.deserialize_current()?;
             user_count += 1;
-            println!("   Found user #{}: {} ({})", user_count, user.username, user.email);
+            tracing::debug!(
+                "   Found user #{}: {} ({})",
+                user_count,
+                user.username,
+                user.email
+            );
         }
-        println!("📊 Total users in database: {}", user_count);
+        tracing::info!("📊 Total users in database: {}", user_count);
 
         // Hash password
         let password_hash = hash(&req.password, DEFAULT_COST)?;
@@ -326,7 +351,7 @@ impl AuthService {
         // Create new user with profile
         let user_id = Uuid::new_v4().to_string();
         let now = chrono::Utc::now().to_rfc3339();
-        
+
         let user = User {
             id: None, // MongoDB will generate the ObjectId
             user_id: user_id.clone(),
@@ -338,7 +363,10 @@ impl AuthService {
             is_admin: false, // First user could be admin, but we'll handle this separately
             is_active: true,
             profile: UserProfile {
-                display_name: req.display_name.clone().or_else(|| Some(req.username.clone())),
+                display_name: req
+                    .display_name
+                    .clone()
+                    .or_else(|| Some(req.username.clone())),
                 bio: None,
                 avatar_url: None,
                 favorite_genres: req.favorite_genres.unwrap_or_default(),
@@ -359,15 +387,21 @@ impl AuthService {
             },
         };
 
-        println!("🔄 Attempting to insert user into MongoDB: {}", req.username);
+        tracing::info!(
+            "🔄 Attempting to insert user into MongoDB: {}",
+            req.username
+        );
 
         // Insert user into MongoDB
         match users.insert_one(&user).await {
             Ok(result) => {
-                println!("✅ Successfully inserted user with ID: {:?}", result.inserted_id);
-            },
+                tracing::info!(
+                    "✅ Successfully inserted user with ID: {:?}",
+                    result.inserted_id
+                );
+            }
             Err(e) => {
-                println!("❌ Failed to insert user into database: {}", e);
+                tracing::error!("❌ Failed to insert user into database: {}", e);
                 return Ok(AuthResponse {
                     success: false,
                     user: None,
@@ -397,7 +431,10 @@ impl AuthService {
         })
     }
 
-    pub async fn login(&self, req: LoginRequest) -> Result<AuthResponse, Box<dyn std::error::Error>> {
+    pub async fn login(
+        &self,
+        req: LoginRequest,
+    ) -> Result<AuthResponse, Box<dyn std::error::Error>> {
         let users = self.users_collection();
 
         // Find user by username
@@ -445,7 +482,12 @@ impl AuthService {
         })
     }
 
-    fn generate_token(&self, user_id: &str, username: &str, email: &str) -> Result<String, Box<dyn std::error::Error>> {
+    fn generate_token(
+        &self,
+        user_id: &str,
+        username: &str,
+        email: &str,
+    ) -> Result<String, Box<dyn std::error::Error>> {
         let expiration = chrono::Utc::now()
             .checked_add_signed(chrono::Duration::hours(24))
             .expect("valid timestamp")
@@ -477,15 +519,22 @@ impl AuthService {
         Ok(token_data.claims)
     }
 
-    pub async fn get_user_by_id(&self, user_id: &str) -> Result<Option<User>, Box<dyn std::error::Error>> {
+    pub async fn get_user_by_id(
+        &self,
+        user_id: &str,
+    ) -> Result<Option<User>, Box<dyn std::error::Error>> {
         let users = self.users_collection();
         let user = users.find_one(doc! {"user_id": user_id}).await?;
         Ok(user)
     }
 
-    pub async fn update_profile(&self, user_id: &str, req: UpdateProfileRequest) -> Result<AuthResponse, Box<dyn std::error::Error>> {
+    pub async fn update_profile(
+        &self,
+        user_id: &str,
+        req: UpdateProfileRequest,
+    ) -> Result<AuthResponse, Box<dyn std::error::Error>> {
         let users = self.users_collection();
-        
+
         let mut update_doc = doc! {
             "updated_at": chrono::Utc::now().to_rfc3339()
         };
@@ -503,19 +552,24 @@ impl AuthService {
             update_doc.insert("profile.favorite_genres", favorite_genres);
         }
         if let Some(preferred_language) = req.preferred_language {
-            update_doc.insert("profile.reading_preferences.preferred_language", preferred_language);
+            update_doc.insert(
+                "profile.reading_preferences.preferred_language",
+                preferred_language,
+            );
         }
         if let Some(mature_content) = req.mature_content {
             update_doc.insert("profile.reading_preferences.mature_content", mature_content);
         }
         if let Some(notifications_enabled) = req.notifications_enabled {
-            update_doc.insert("profile.reading_preferences.notifications_enabled", notifications_enabled);
+            update_doc.insert(
+                "profile.reading_preferences.notifications_enabled",
+                notifications_enabled,
+            );
         }
 
-        let result = users.update_one(
-            doc! {"user_id": user_id},
-            doc! {"$set": update_doc}
-        ).await?;
+        let result = users
+            .update_one(doc! {"user_id": user_id}, doc! {"$set": update_doc})
+            .await?;
 
         if result.matched_count == 0 {
             return Ok(AuthResponse {
@@ -553,7 +607,12 @@ impl AuthService {
         }
     }
 
-    pub async fn list_users(&self, admin_user_id: &str, page: Option<i64>, limit: Option<i64>) -> Result<UserListResponse, Box<dyn std::error::Error>> {
+    pub async fn list_users(
+        &self,
+        admin_user_id: &str,
+        page: Option<i64>,
+        limit: Option<i64>,
+    ) -> Result<UserListResponse, Box<dyn std::error::Error>> {
         // Verify admin permissions
         if let Some(admin_user) = self.get_user_by_id(admin_user_id).await? {
             if !admin_user.is_admin {
@@ -574,16 +633,17 @@ impl AuthService {
         }
 
         let users = self.users_collection();
-        
+
         // Get total count
         let total_count = users.count_documents(doc! {}).await?;
-        
+
         // Apply pagination
         let page = page.unwrap_or(1).max(1);
         let limit = limit.unwrap_or(10).min(100); // Max 100 users per page
         let skip = (page - 1) * limit;
-        
-        let mut cursor = users.find(doc! {})
+
+        let mut cursor = users
+            .find(doc! {})
             .sort(doc! {"created_at": -1})
             .skip(skip as u64)
             .limit(limit)
@@ -612,7 +672,11 @@ impl AuthService {
         })
     }
 
-    pub async fn admin_manage_user(&self, admin_user_id: &str, req: AdminUserRequest) -> Result<AdminResponse, Box<dyn std::error::Error>> {
+    pub async fn admin_manage_user(
+        &self,
+        admin_user_id: &str,
+        req: AdminUserRequest,
+    ) -> Result<AdminResponse, Box<dyn std::error::Error>> {
         // Verify admin permissions
         if let Some(admin_user) = self.get_user_by_id(admin_user_id).await? {
             if !admin_user.is_admin {
@@ -631,14 +695,14 @@ impl AuthService {
         }
 
         let users = self.users_collection();
-        
+
         match req.action {
             AdminAction::Activate => {
                 let result = users.update_one(
                     doc! {"user_id": &req.user_id},
                     doc! {"$set": {"is_active": true, "updated_at": chrono::Utc::now().to_rfc3339()}}
                 ).await?;
-                
+
                 if result.matched_count > 0 {
                     let user = self.get_user_by_id(&req.user_id).await?;
                     Ok(AdminResponse {
@@ -662,13 +726,13 @@ impl AuthService {
                         affected_user: None,
                     })
                 }
-            },
+            }
             AdminAction::Deactivate => {
                 let result = users.update_one(
                     doc! {"user_id": &req.user_id},
                     doc! {"$set": {"is_active": false, "updated_at": chrono::Utc::now().to_rfc3339()}}
                 ).await?;
-                
+
                 if result.matched_count > 0 {
                     Ok(AdminResponse {
                         success: true,
@@ -682,10 +746,10 @@ impl AuthService {
                         affected_user: None,
                     })
                 }
-            },
+            }
             AdminAction::Delete => {
                 let user_to_delete = self.get_user_by_id(&req.user_id).await?;
-                
+
                 // Prevent deleting another admin unless you're a super admin
                 if let Some(ref user) = user_to_delete {
                     if user.is_admin && user.user_id != admin_user_id {
@@ -696,9 +760,9 @@ impl AuthService {
                         });
                     }
                 }
-                
+
                 let result = users.delete_one(doc! {"user_id": &req.user_id}).await?;
-                
+
                 if result.deleted_count > 0 {
                     Ok(AdminResponse {
                         success: true,
@@ -712,13 +776,13 @@ impl AuthService {
                         affected_user: None,
                     })
                 }
-            },
+            }
             AdminAction::MakeAdmin => {
                 let result = users.update_one(
                     doc! {"user_id": &req.user_id},
                     doc! {"$set": {"is_admin": true, "updated_at": chrono::Utc::now().to_rfc3339()}}
                 ).await?;
-                
+
                 if result.matched_count > 0 {
                     Ok(AdminResponse {
                         success: true,
@@ -732,7 +796,7 @@ impl AuthService {
                         affected_user: None,
                     })
                 }
-            },
+            }
             AdminAction::RemoveAdmin => {
                 // Prevent removing admin from self
                 if req.user_id == admin_user_id {
@@ -742,12 +806,12 @@ impl AuthService {
                         affected_user: None,
                     });
                 }
-                
+
                 let result = users.update_one(
                     doc! {"user_id": &req.user_id},
                     doc! {"$set": {"is_admin": false, "updated_at": chrono::Utc::now().to_rfc3339()}}
                 ).await?;
-                
+
                 if result.matched_count > 0 {
                     Ok(AdminResponse {
                         success: true,
@@ -761,7 +825,7 @@ impl AuthService {
                         affected_user: None,
                     })
                 }
-            },
+            }
         }
     }
 }
@@ -781,7 +845,7 @@ pub async fn register_handler(
             (status, Json(response))
         }
         Err(e) => {
-            eprintln!("Registration error: {}", e);
+            tracing::error!("Registration error: {}", e);
             (
                 StatusCode::INTERNAL_SERVER_ERROR,
                 Json(AuthResponse {
@@ -809,7 +873,7 @@ pub async fn login_handler(
             (status, Json(response))
         }
         Err(e) => {
-            eprintln!("Login error: {}", e);
+            tracing::error!("Login error: {}", e);
             (
                 StatusCode::INTERNAL_SERVER_ERROR,
                 Json(AuthResponse {
@@ -853,71 +917,71 @@ pub async fn profile_handler(
 ) -> impl IntoResponse {
     let token = match extract_token_from_header(&headers) {
         Some(token) => token,
-        None => return (
-            StatusCode::UNAUTHORIZED,
-            Json(AuthResponse {
-                success: false,
-                user: None,
-                token: None,
-                message: Some("No authorization token provided".to_string()),
-            })
-        ),
+        None => {
+            return (
+                StatusCode::UNAUTHORIZED,
+                Json(AuthResponse {
+                    success: false,
+                    user: None,
+                    token: None,
+                    message: Some("No authorization token provided".to_string()),
+                }),
+            )
+        }
     };
 
     match auth_service.verify_token(&token).await {
-        Ok(claims) => {
-            match auth_service.get_user_by_id(&claims.sub).await {
-                Ok(Some(user)) => {
-                    if !user.is_active {
-                        return (
-                            StatusCode::FORBIDDEN,
-                            Json(AuthResponse {
-                                success: false,
-                                user: None,
-                                token: None,
-                                message: Some("Account is deactivated".to_string()),
-                            })
-                        );
-                    }
-
-                    (
-                        StatusCode::OK,
+        Ok(claims) => match auth_service.get_user_by_id(&claims.sub).await {
+            Ok(Some(user)) => {
+                if !user.is_active {
+                    return (
+                        StatusCode::FORBIDDEN,
                         Json(AuthResponse {
-                            success: true,
-                            user: Some(UserPublic {
-                                id: user.user_id,
-                                username: user.username,
-                                email: user.email,
-                                created_at: user.created_at,
-                                is_admin: user.is_admin,
-                                is_active: user.is_active,
-                                profile: user.profile,
-                                reading_stats: user.reading_stats,
-                            }),
+                            success: false,
+                            user: None,
                             token: None,
-                            message: Some("Profile retrieved successfully".to_string()),
-                        })
-                    )
-                },
-                Ok(None) => (
-                    StatusCode::NOT_FOUND,
+                            message: Some("Account is deactivated".to_string()),
+                        }),
+                    );
+                }
+
+                (
+                    StatusCode::OK,
                     Json(AuthResponse {
-                        success: false,
-                        user: None,
+                        success: true,
+                        user: Some(UserPublic {
+                            id: user.user_id,
+                            username: user.username,
+                            email: user.email,
+                            created_at: user.created_at,
+                            is_admin: user.is_admin,
+                            is_active: user.is_active,
+                            profile: user.profile,
+                            reading_stats: user.reading_stats,
+                        }),
                         token: None,
-                        message: Some("User not found".to_string()),
-                    })
-                ),
-                Err(_) => (
-                    StatusCode::INTERNAL_SERVER_ERROR,
-                    Json(AuthResponse {
-                        success: false,
-                        user: None,
-                        token: None,
-                        message: Some("Internal server error".to_string()),
-                    })
-                ),
+                        message: Some("Profile retrieved successfully".to_string()),
+                    }),
+                )
             }
+            Ok(None) => (
+                StatusCode::NOT_FOUND,
+                Json(AuthResponse {
+                    success: false,
+                    user: None,
+                    token: None,
+                    message: Some("User not found".to_string()),
+                }),
+            ),
+            Err(_) => (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(AuthResponse {
+                    success: false,
+                    user: None,
+                    token: None,
+                    message: Some("Internal server error".to_string()),
+                }),
+            ),
         },
         Err(_) => (
             StatusCode::UNAUTHORIZED,
@@ -926,7 +990,7 @@ pub async fn profile_handler(
                 user: None,
                 token: None,
                 message: Some("Invalid token".to_string()),
-            })
+            }),
         ),
     }
 }
@@ -938,31 +1002,31 @@ pub async fn update_profile_handler(
 ) -> impl IntoResponse {
     let token = match extract_token_from_header(&headers) {
         Some(token) => token,
-        None => return (
-            StatusCode::UNAUTHORIZED,
-            Json(AuthResponse {
-                success: false,
-                user: None,
-                token: None,
-                message: Some("No authorization token provided".to_string()),
-            })
-        ),
+        None => {
+            return (
+                StatusCode::UNAUTHORIZED,
+                Json(AuthResponse {
+                    success: false,
+                    user: None,
+                    token: None,
+                    message: Some("No authorization token provided".to_string()),
+                }),
+            )
+        }
     };
 
     match auth_service.verify_token(&token).await {
-        Ok(claims) => {
-            match auth_service.update_profile(&claims.sub, req).await {
-                Ok(response) => (StatusCode::OK, Json(response)),
-                Err(_) => (
-                    StatusCode::INTERNAL_SERVER_ERROR,
-                    Json(AuthResponse {
-                        success: false,
-                        user: None,
-                        token: None,
-                        message: Some("Internal server error".to_string()),
-                    })
-                ),
-            }
+        Ok(claims) => match auth_service.update_profile(&claims.sub, req).await {
+            Ok(response) => (StatusCode::OK, Json(response)),
+            Err(_) => (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(AuthResponse {
+                    success: false,
+                    user: None,
+                    token: None,
+                    message: Some("Internal server error".to_string()),
+                }),
+            ),
         },
         Err(_) => (
             StatusCode::UNAUTHORIZED,
@@ -971,7 +1035,7 @@ pub async fn update_profile_handler(
                 user: None,
                 token: None,
                 message: Some("Invalid token".to_string()),
-            })
+            }),
         ),
     }
 }
@@ -989,20 +1053,25 @@ pub async fn list_users_handler(
 ) -> impl IntoResponse {
     let token = match extract_token_from_header(&headers) {
         Some(token) => token,
-        None => return (
-            StatusCode::UNAUTHORIZED,
-            Json(UserListResponse {
-                success: false,
-                users: None,
-                total_count: None,
-                message: Some("No authorization token provided".to_string()),
-            })
-        ),
+        None => {
+            return (
+                StatusCode::UNAUTHORIZED,
+                Json(UserListResponse {
+                    success: false,
+                    users: None,
+                    total_count: None,
+                    message: Some("No authorization token provided".to_string()),
+                }),
+            )
+        }
     };
 
     match auth_service.verify_token(&token).await {
         Ok(claims) => {
-            match auth_service.list_users(&claims.sub, pagination.page, pagination.limit).await {
+            match auth_service
+                .list_users(&claims.sub, pagination.page, pagination.limit)
+                .await
+            {
                 Ok(response) => (StatusCode::OK, Json(response)),
                 Err(_) => (
                     StatusCode::INTERNAL_SERVER_ERROR,
@@ -1011,10 +1080,10 @@ pub async fn list_users_handler(
                         users: None,
                         total_count: None,
                         message: Some("Internal server error".to_string()),
-                    })
+                    }),
                 ),
             }
-        },
+        }
         Err(_) => (
             StatusCode::UNAUTHORIZED,
             Json(UserListResponse {
@@ -1022,7 +1091,7 @@ pub async fn list_users_handler(
                 users: None,
                 total_count: None,
                 message: Some("Invalid token".to_string()),
-            })
+            }),
         ),
     }
 }
@@ -1034,29 +1103,29 @@ pub async fn admin_user_handler(
 ) -> impl IntoResponse {
     let token = match extract_token_from_header(&headers) {
         Some(token) => token,
-        None => return (
-            StatusCode::UNAUTHORIZED,
-            Json(AdminResponse {
-                success: false,
-                message: "No authorization token provided".to_string(),
-                affected_user: None,
-            })
-        ),
+        None => {
+            return (
+                StatusCode::UNAUTHORIZED,
+                Json(AdminResponse {
+                    success: false,
+                    message: "No authorization token provided".to_string(),
+                    affected_user: None,
+                }),
+            )
+        }
     };
 
     match auth_service.verify_token(&token).await {
-        Ok(claims) => {
-            match auth_service.admin_manage_user(&claims.sub, req).await {
-                Ok(response) => (StatusCode::OK, Json(response)),
-                Err(_) => (
-                    StatusCode::INTERNAL_SERVER_ERROR,
-                    Json(AdminResponse {
-                        success: false,
-                        message: "Internal server error".to_string(),
-                        affected_user: None,
-                    })
-                ),
-            }
+        Ok(claims) => match auth_service.admin_manage_user(&claims.sub, req).await {
+            Ok(response) => (StatusCode::OK, Json(response)),
+            Err(_) => (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(AdminResponse {
+                    success: false,
+                    message: "Internal server error".to_string(),
+                    affected_user: None,
+                }),
+            ),
         },
         Err(_) => (
             StatusCode::UNAUTHORIZED,
@@ -1064,7 +1133,7 @@ pub async fn admin_user_handler(
                 success: false,
                 message: "Invalid token".to_string(),
                 affected_user: None,
-            })
+            }),
         ),
     }
 }

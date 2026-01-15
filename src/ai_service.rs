@@ -1,10 +1,10 @@
 // src/ai_service.rs
 
+use super::api::{MangaData, MangaDexClientError};
 use reqwest::Client;
 use serde::{Deserialize, Serialize};
 use std::env;
 use std::fs;
-use crate::api::{MangaData, MangaDexClientError};
 
 #[derive(Debug, Serialize)]
 struct CohereEmbedRequest {
@@ -70,57 +70,77 @@ pub struct AIService {
 impl AIService {
     pub fn new() -> Result<Self, String> {
         // Try to read API key from file first, then fall back to environment variable
-        let api_key = Self::read_api_key_from_file()
-            .or_else(|_| env::var("OPENAI_API_KEY").map_err(|_| "OPENAI_API_KEY not found".to_string()))?;
-        
+        let api_key = Self::read_api_key_from_file().or_else(|_| {
+            env::var("OPENAI_API_KEY").map_err(|_| "OPENAI_API_KEY not found".to_string())
+        })?;
+
         let client = Client::builder()
             .user_agent("MangaViewer-AI/1.0")
             .build()
             .map_err(|e| format!("Failed to build HTTP client: {}", e))?;
 
-        let cohere_key = env::var("COHERE_API_KEY").map_err(|_| "COHERE_API_KEY not found".to_string())?;
-        let ollama_url = env::var("OLLAMA_URL").unwrap_or_else(|_| "http://localhost:11434".to_string());
+        let cohere_key =
+            env::var("COHERE_API_KEY").map_err(|_| "COHERE_API_KEY not found".to_string())?;
+        let ollama_url =
+            env::var("OLLAMA_URL").unwrap_or_else(|_| "http://localhost:11434".to_string());
 
-        Ok(AIService { client, api_key, cohere_key, ollama_url })
+        Ok(AIService {
+            client,
+            api_key,
+            cohere_key,
+            ollama_url,
+        })
     }
-        // Ollama embedding function
-        pub async fn embed_with_ollama(&self, text: &str, model: &str) -> Result<Vec<f32>, MangaDexClientError> {
-            #[derive(Serialize)]
-            struct OllamaEmbedRequest {
-                model: String,
-                prompt: String,
-            }
-            #[derive(Deserialize)]
-            struct OllamaEmbedResponse {
-                embedding: Vec<f32>,
-            }
-            let request = OllamaEmbedRequest {
-                model: model.to_string(),
-                prompt: text.to_string(),
-            };
-            let url = format!("{}/api/embeddings", self.ollama_url);
-            let response = self
-                .client
-                .post(&url)
-                .header("Content-Type", "application/json")
-                .json(&request)
-                .send()
-                .await
-                .map_err(|e| MangaDexClientError::Reqwest(e))?;
-
-            if !response.status().is_success() {
-                let error_text = response.text().await.unwrap_or_else(|_| "Unknown error".to_string());
-                return Err(MangaDexClientError::RequestFailed(format!("Ollama API error: {}", error_text)));
-            }
-
-            let ollama_response: OllamaEmbedResponse = response
-                .json()
-                .await
-                .map_err(|e| MangaDexClientError::RequestFailed(format!("Failed to parse Ollama response: {}", e)))?;
-
-            Ok(ollama_response.embedding)
+    // Ollama embedding function
+    pub async fn embed_with_ollama(
+        &self,
+        text: &str,
+        model: &str,
+    ) -> Result<Vec<f32>, MangaDexClientError> {
+        #[derive(Serialize)]
+        struct OllamaEmbedRequest {
+            model: String,
+            prompt: String,
         }
-    pub async fn embed_with_cohere(&self, texts: Vec<String>) -> Result<Vec<Vec<f32>>, MangaDexClientError> {
+        #[derive(Deserialize)]
+        struct OllamaEmbedResponse {
+            embedding: Vec<f32>,
+        }
+        let request = OllamaEmbedRequest {
+            model: model.to_string(),
+            prompt: text.to_string(),
+        };
+        let url = format!("{}/api/embeddings", self.ollama_url);
+        let response = self
+            .client
+            .post(&url)
+            .header("Content-Type", "application/json")
+            .json(&request)
+            .send()
+            .await
+            .map_err(|e| MangaDexClientError::Reqwest(e))?;
+
+        if !response.status().is_success() {
+            let error_text = response
+                .text()
+                .await
+                .unwrap_or_else(|_| "Unknown error".to_string());
+            return Err(MangaDexClientError::RequestFailed(format!(
+                "Ollama API error: {}",
+                error_text
+            )));
+        }
+
+        let ollama_response: OllamaEmbedResponse = response.json().await.map_err(|e| {
+            MangaDexClientError::RequestFailed(format!("Failed to parse Ollama response: {}", e))
+        })?;
+
+        Ok(ollama_response.embedding)
+    }
+    pub async fn embed_with_cohere(
+        &self,
+        texts: Vec<String>,
+    ) -> Result<Vec<Vec<f32>>, MangaDexClientError> {
         let request = CohereEmbedRequest { texts };
         let response = self
             .client
@@ -133,14 +153,19 @@ impl AIService {
             .map_err(|e| MangaDexClientError::Reqwest(e))?;
 
         if !response.status().is_success() {
-            let error_text = response.text().await.unwrap_or_else(|_| "Unknown error".to_string());
-            return Err(MangaDexClientError::RequestFailed(format!("Cohere API error: {}", error_text)));
+            let error_text = response
+                .text()
+                .await
+                .unwrap_or_else(|_| "Unknown error".to_string());
+            return Err(MangaDexClientError::RequestFailed(format!(
+                "Cohere API error: {}",
+                error_text
+            )));
         }
 
-        let cohere_response: CohereEmbedResponse = response
-            .json()
-            .await
-            .map_err(|e| MangaDexClientError::RequestFailed(format!("Failed to parse Cohere response: {}", e)))?;
+        let cohere_response: CohereEmbedResponse = response.json().await.map_err(|e| {
+            MangaDexClientError::RequestFailed(format!("Failed to parse Cohere response: {}", e))
+        })?;
 
         Ok(cohere_response.embeddings)
     }
@@ -149,20 +174,73 @@ impl AIService {
         // Read the .openai_key file from the current directory
         let file_content = fs::read_to_string(".openai_key")
             .map_err(|e| format!("Failed to read .openai_key file: {}", e))?;
-        
+
         // Split into lines and get the second line (index 1)
         let lines: Vec<&str> = file_content.lines().collect();
         if lines.len() < 2 {
             return Err("File .openai_key must have at least 2 lines".to_string());
         }
-        
+
         let api_key = lines[1].trim();
         if api_key.is_empty() {
             return Err("API key on line 2 is empty".to_string());
         }
-        
+
         Ok(api_key.to_string())
     }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    use std::fs::{self, File};
+    use std::io::Write;
+
+    #[test]
+    fn test_read_api_key_from_file_success() {
+        let test_content = "first-line\nmy-test-api-key\n";
+        let test_path = ".openai_key_test";
+        let mut file = File::create(test_path).unwrap();
+        file.write_all(test_content.as_bytes()).unwrap();
+
+        let result = fs::read_to_string(test_path).unwrap();
+        let lines: Vec<&str> = result.lines().collect();
+        assert_eq!(lines[1], "my-test-api-key");
+
+        // Clean up
+        fs::remove_file(test_path).unwrap();
+    }
+
+    #[test]
+    fn test_read_api_key_from_file_too_few_lines() {
+        let test_content = "only-one-line\n";
+        let test_path = ".openai_key_test";
+        let mut file = File::create(test_path).unwrap();
+        file.write_all(test_content.as_bytes()).unwrap();
+
+        let result = fs::read_to_string(test_path).unwrap();
+        let lines: Vec<&str> = result.lines().collect();
+        assert_eq!(lines.len(), 1);
+
+        // Clean up
+        fs::remove_file(test_path).unwrap();
+    }
+
+    #[test]
+    fn test_read_api_key_from_file_empty_key() {
+        let test_content = "first-line\n\n";
+        let test_path = ".openai_key_test";
+        let mut file = File::create(test_path).unwrap();
+        file.write_all(test_content.as_bytes()).unwrap();
+
+        let result = fs::read_to_string(test_path).unwrap();
+        let lines: Vec<&str> = result.lines().collect();
+        assert_eq!(lines[1], "");
+
+        // Clean up
+        fs::remove_file(test_path).unwrap();
+    }
+}
 
     pub async fn get_manga_recommendations(
         &self,
@@ -172,11 +250,13 @@ impl AIService {
         let liked_titles: Vec<String> = liked_manga
             .iter()
             .map(|manga| {
-                manga.attributes.title
+                manga
+                    .attributes
+                    .title
                     .get("en")
-                    .or_else(|| manga.attributes.title.values().next())
-                    .unwrap_or(&manga.id)
-                    .clone()
+                    .cloned()
+                    .or_else(|| manga.attributes.title.values().next().cloned())
+                    .unwrap_or_else(|| manga.id.clone())
             })
             .collect();
 
@@ -189,26 +269,31 @@ impl AIService {
         );
 
         let response = self.call_openai(&prompt).await?;
-        
-        serde_json::from_str::<MangaRecommendation>(&response)
-            .map_err(|e| MangaDexClientError::RequestFailed(
-                format!("Failed to parse AI response: {}", e)
-            ))
+
+        serde_json::from_str::<MangaRecommendation>(&response).map_err(|e| {
+            MangaDexClientError::RequestFailed(format!("Failed to parse AI response: {}", e))
+        })
     }
 
     pub async fn generate_manga_summary(
         &self,
         manga: &MangaData,
     ) -> Result<MangaSummary, MangaDexClientError> {
-        let title = manga.attributes.title
+        let title = manga
+            .attributes
+            .title
             .get("en")
-            .or_else(|| manga.attributes.title.values().next())
-            .unwrap_or(&manga.id);
+            .cloned()
+            .or_else(|| manga.attributes.title.values().next().cloned())
+            .unwrap_or_else(|| manga.id.clone());
 
-        let description = manga.attributes.description
+        let description = manga
+            .attributes
+            .description
             .get("en")
-            .or_else(|| manga.attributes.description.values().next())
-            .map_or("No description available", |v| v);
+            .cloned()
+            .or_else(|| manga.attributes.description.values().next().cloned())
+            .unwrap_or_else(|| "No description available".to_string());
 
         let prompt = format!(
             "Analyze this manga and provide a concise summary:\n\
@@ -225,11 +310,10 @@ impl AIService {
         );
 
         let response = self.call_openai(&prompt).await?;
-        
-        serde_json::from_str::<MangaSummary>(&response)
-            .map_err(|e| MangaDexClientError::RequestFailed(
-                format!("Failed to parse AI response: {}", e)
-            ))
+
+        serde_json::from_str::<MangaSummary>(&response).map_err(|e| {
+            MangaDexClientError::RequestFailed(format!("Failed to parse AI response: {}", e))
+        })
     }
 
     pub async fn semantic_search_query(
@@ -267,26 +351,26 @@ impl AIService {
             .map_err(|e| MangaDexClientError::Reqwest(e))?;
 
         if !response.status().is_success() {
-            let error_text = response.text().await
+            let error_text = response
+                .text()
+                .await
                 .unwrap_or_else(|_| "Unknown error".to_string());
-            return Err(MangaDexClientError::RequestFailed(
-                format!("OpenAI API error: {}", error_text)
-            ));
+            return Err(MangaDexClientError::RequestFailed(format!(
+                "OpenAI API error: {}",
+                error_text
+            )));
         }
 
-        let openai_response: OpenAIResponse = response
-            .json()
-            .await
-            .map_err(|e| MangaDexClientError::RequestFailed(
-                format!("Failed to parse OpenAI response: {}", e)
-            ))?;
+        let openai_response: OpenAIResponse = response.json().await.map_err(|e| {
+            MangaDexClientError::RequestFailed(format!("Failed to parse OpenAI response: {}", e))
+        })?;
 
         openai_response
             .choices
             .first()
             .map(|choice| choice.message.content.clone())
-            .ok_or_else(|| MangaDexClientError::RequestFailed(
-                "No response from OpenAI".to_string()
-            ))
+            .ok_or_else(|| {
+                MangaDexClientError::RequestFailed("No response from OpenAI".to_string())
+            })
     }
 }

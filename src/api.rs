@@ -5,6 +5,12 @@ use urlencoding;
 
 // --- API Response Structs ---
 
+#[derive(Debug, Serialize)]
+pub struct ApiError {
+    pub error: String,
+    pub message: Option<String>,
+}
+
 #[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct MangaDexResponse {
     pub data: Vec<MangaData>,
@@ -180,23 +186,23 @@ impl MangaDexClient {
     ) -> Result<FilteredMangaResponse, MangaDexClientError> {
         // First get all results
         let response = self.search_manga(title, limit, offset).await?;
-        
+
         // Filter manga based on English content availability
         let (english_manga, non_english_manga) = Self::filter_manga_by_language(&response.data);
-        
+
         let english_count = english_manga.len() as u32;
         let non_english_count = non_english_manga.len() as u32;
         let has_english_content = english_count > 0;
-        
+
         // Generate appropriate message
         let message = if !has_english_content && non_english_count > 0 {
             Some(format!(
-                "No English manga found for '{}'. Found {} manga in other languages. Would you like to see them?", 
+                "No English manga found for '{}'. Found {} manga in other languages. Would you like to see them?",
                 title, non_english_count
             ))
         } else if has_english_content && non_english_count > 0 && !include_non_english {
             Some(format!(
-                "Showing {} English manga. {} additional manga available in other languages.", 
+                "Showing {} English manga. {} additional manga available in other languages.",
                 english_count, non_english_count
             ))
         } else {
@@ -234,19 +240,19 @@ impl MangaDexClient {
         if manga.attributes.title.contains_key("en") {
             return true;
         }
-        
+
         // Check if manga has English description
         if manga.attributes.description.contains_key("en") {
             return true;
         }
-        
+
         // Check if original language is English
         if let Some(ref lang) = manga.attributes.original_language {
             if lang == "en" {
                 return true;
             }
         }
-        
+
         false
     }
 }
@@ -284,12 +290,12 @@ mod tests {
     fn create_test_manga(title_en: Option<&str>, desc_en: Option<&str>, orig_lang: Option<&str>) -> MangaData {
         let mut title = HashMap::new();
         let mut description = HashMap::new();
-        
+
         if let Some(en_title) = title_en {
             title.insert("en".to_string(), en_title.to_string());
         }
         title.insert("ja".to_string(), "日本語タイトル".to_string());
-        
+
         if let Some(en_desc) = desc_en {
             description.insert("en".to_string(), en_desc.to_string());
         }
@@ -333,7 +339,7 @@ mod tests {
         ];
 
         let (english, non_english) = MangaDexClient::filter_manga_by_language(&manga_list);
-        
+
         assert_eq!(english.len(), 2);
         assert_eq!(non_english.len(), 1);
     }
