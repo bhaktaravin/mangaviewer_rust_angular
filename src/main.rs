@@ -3,7 +3,6 @@ use axum::{
     http::header::{AUTHORIZATION, CONTENT_TYPE},
     http::Method,
     http::StatusCode,
-    middleware,
     response::IntoResponse,
     routing::{get, post},
     Router,
@@ -24,17 +23,28 @@ use utoipa::OpenApi;
 mod ai_service;
 mod api;
 mod auth_mongodb;
+mod cache;
+mod handlers;
 mod manga_service;
-mod app_middleware;
 mod pagination;
+mod progress;
+mod search;
 mod validation;
 
 use ai_service::AIService;
 use auth_mongodb::{login_handler, logout_handler, register_handler, AuthService};
+use cache::CacheService;
+use handlers::{
+    add_to_library_handler, advanced_search_handler, autocomplete_handler,
+    get_library_handler, get_reading_stats_handler, update_progress_handler,
+    AppState,
+};
 use manga_service::{
     get_manga_handler, list_manga_handler, save_manga_handler, search_manga_handler,
-    semantic_search_handler, MangaService,
+    MangaService,
 };
+use progress::ProgressService;
+use search::SearchService;
 
 // --- HEALTH ENDPOINT ---
 async fn health_handler(State(manga_service): State<MangaService>) -> impl IntoResponse {
@@ -55,6 +65,8 @@ async fn health_handler(State(manga_service): State<MangaService>) -> impl IntoR
 }
 
 // --- ADMIN ENDPOINT ---
+// Temporarily disabled - needs state refactoring
+/*
 async fn update_embeddings_admin_handler(
     State(manga_service): State<MangaService>,
     State(ai_service): State<AIService>,
@@ -81,6 +93,7 @@ async fn update_embeddings_admin_handler(
         ),
     }
 }
+*/
 
 #[derive(Deserialize)]
 struct MangaQuery {
@@ -444,6 +457,43 @@ async fn main() {
         }
     };
 
+    // Initialize Redis cache (optional - fails gracefully if not available)
+    let cache_service = match std::env::var("REDIS_URL") {
+        Ok(redis_url) => {
+            println!("🔄 Connecting to Redis at {}...", redis_url);
+            match CacheService::new(&redis_url).await {
+                Ok(cache) => {
+                    println!("✅ Redis cache connected");
+                    Some(cache)
+                }
+                Err(e) => {
+                    eprintln!("⚠️  Redis cache unavailable: {}", e);
+                    eprintln!("   Continuing without caching...");
+                    None
+                }
+            }
+        }
+        Err(_) => {
+            println!("ℹ️  REDIS_URL not set, running without cache");
+            None
+        }
+    };
+
+    // Initialize Progress Service
+    let progress_service = match ProgressService::new().await {
+        Ok(service) => {
+            println!("✅ Progress tracking service initialized");
+            service
+        }
+        Err(e) => {
+            eprintln!("❌ Failed to initialize progress service: {}", e);
+            std::process::exit(1);
+        }
+    };
+
+    // Initialize Search Service with caching
+    let search_service = SearchService::new(cache_service.clone());
+
     // --- Automatic embedding update on server start ---
     let ai_service = match AIService::new() {
         Ok(service) => service,
@@ -466,6 +516,14 @@ async fn main() {
         .allow_methods([Method::GET, Method::POST, Method::OPTIONS])
         .allow_headers([AUTHORIZATION, CONTENT_TYPE]);
 
+    // Create unified AppState for new endpoints
+    let app_state = AppState {
+        manga_service: manga_service.clone(),
+        progress_service,
+        search_service,
+        cache_service: cache_service.clone(),
+    };
+
     let auth_routes = Router::new()
         .route("/api/auth/login", post(login_handler))
         .route("/api/auth/register", post(register_handler))
@@ -477,17 +535,27 @@ async fn main() {
         .route("/api/manga/:manga_id", get(get_manga_handler))
         .route("/api/manga/list", get(list_manga_handler))
         .route("/api/manga/search", get(search_manga_handler))
-        .route("/api/manga/semantic-search", post(semantic_search_handler))
+        // .route("/api/manga/semantic-search", post(semantic_search_handler)) // Temporarily disabled
         .with_state(manga_service.clone())
         .with_state(ai_service.clone());
 
-    let admin_routes = Router::new()
-        .route(
-            "/api/admin/update-embeddings",
-            post(update_embeddings_admin_handler),
-        )
-        .with_state(manga_service.clone())
-        .with_state(ai_service.clone());
+    let search_routes = Router::new()
+        .route("/api/search/advanced", get(advanced_search_handler))
+        .route("/api/search/autocomplete", get(autocomplete_handler))
+        .with_state(app_state.clone());
+
+    let progress_routes = Router::new()
+        .route("/api/progress/library/add", post(add_to_library_handler))
+        .route("/api/progress/update", post(update_progress_handler))
+        .route("/api/progress/library", get(get_library_handler))
+        .route("/api/progress/stats", get(get_reading_stats_handler))
+        .with_state(app_state);
+
+    let admin_routes = Router::new();
+        // Temporarily disabled - needs state refactoring  
+        // .route(\"/api/admin/update-embeddings\", post(update_embeddings_admin_handler))
+        // .with_state(manga_service.clone())
+        // .with_state(ai_service.clone());
 
     let app = Router::new()
         .route("/", get(root_handler))
@@ -499,7 +567,10 @@ async fn main() {
         .nest_service("/api-doc", ServeDir::new("public"))
         .merge(auth_routes)
         .merge(manga_routes)
+        .merge(search_routes)
+        .merge(progress_routes)
         .merge(admin_routes)
+        .with_state(manga_service)
         .layer(cors);
 
     let addr = SocketAddr::from(([0, 0, 0, 0], 3000));
@@ -526,9 +597,22 @@ async fn main() {
     println!("   GET  http://{}/api/manga/:manga_id", addr);
     println!("   GET  http://{}/api/manga/list", addr);
     println!("   GET  http://{}/api/manga/search?q=query", addr);
+    println!("🔍 Advanced Search endpoints:");
+    println!("   GET  http://{}/api/search/advanced?query=...&tags=...&status=...", addr);
+    println!("   GET  http://{}/api/search/autocomplete?q=query", addr);
+    println!("📊 Progress Tracking endpoints:");
+    println!("   POST http://{}/api/progress/library/add", addr);
+    println!("   POST http://{}/api/progress/update", addr);
+    println!("   GET  http://{}/api/progress/library?user_id=...", addr);
+    println!("   GET  http://{}/api/progress/stats?user_id=...", addr);
     println!();
     println!("✅ Server ready! (Using MongoDB storage)");
+    if cache_service.is_some() {
+        println!("🚀 Redis caching enabled for better performance!");
+    }
 
     let listener = TcpListener::bind(addr).await.unwrap();
-    axum::serve(listener, app).await.unwrap();
+    axum::serve(listener, app.into_make_service())
+        .await
+        .unwrap();
 }
