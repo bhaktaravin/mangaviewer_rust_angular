@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { HttpClient } from '@angular/common/http';
+import { ToastrService } from 'ngx-toastr';
 import { Apiservice } from '../apiservice';
 import { AuthService } from '../auth.service';
 import { CoverImageService } from '../cover-image.service';
@@ -91,7 +92,8 @@ export class MangaDetailComponent implements OnInit {
     private readonly router: Router,
     private readonly http: HttpClient,
     private readonly auth: AuthService,
-    private readonly coverService: CoverImageService
+    private readonly coverService: CoverImageService,
+    private readonly toastr: ToastrService
   ) {}
 
   get chapters() { return this._chapters(); }
@@ -105,6 +107,7 @@ export class MangaDetailComponent implements OnInit {
   get inLibrary() { return this._inLibrary(); }
   get downloading() { return this._downloading(); }
   get selectedCommonPath() { return this._selectedCommonPath(); }
+  get coverUrl() { return this._coverUrl(); }
 
   ngOnInit() {
     // Deprecated: getCurrentNavigation() is used for compatibility
@@ -160,7 +163,7 @@ export class MangaDetailComponent implements OnInit {
         this._error.set('No chapters found for this manga');
       }
     } catch (error) {
-      console.error('Error loading chapters:', error);
+      this.toastr.error('Failed to load chapters', 'Error');
       this._error.set('Failed to load chapters');
     } finally {
       this._loading.set(false);
@@ -251,7 +254,7 @@ export class MangaDetailComponent implements OnInit {
         this._error.set((response as any)?.error || 'Download failed');
       }
     } catch (error) {
-      console.error('Download error:', error);
+      this.toastr.error('Failed to download chapter', 'Error');
       this._error.set('Failed to download chapter');
     } finally {
       this._downloading.set(false);
@@ -310,15 +313,18 @@ export class MangaDetailComponent implements OnInit {
         if (response.success) {
           this._inLibrary.set(true);
           this._addingToLibrary.set(false);
+          this.toastr.success(`Added "${mangaTitle}" to your library!`, 'Success');
         } else {
           this._error.set('Failed to add to library');
           this._addingToLibrary.set(false);
+          this.toastr.error('Failed to add to library', 'Error');
         }
       },
       error: (err) => {
-        console.error('Error adding to library:', err);
+        this.toastr.error('Failed to add to library. Please try again.', 'Error');
         this._error.set('Failed to add to library. Please try again.');
         this._addingToLibrary.set(false);
       }
     });
   }
+}

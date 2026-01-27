@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { HttpClient } from '@angular/common/http';
 import { RouterModule, Router } from '@angular/router';
 import { Observable } from 'rxjs';
+import { ToastrService } from 'ngx-toastr';
 import { AuthService } from '../auth.service';
 import { CoverImageService } from '../cover-image.service';
 import { FormsModule } from '@angular/forms';
@@ -77,7 +78,8 @@ export class LibraryComponent implements OnInit {
     private readonly http: HttpClient,
     private readonly auth: AuthService,
     private readonly router: Router,
-    private readonly coverService: CoverImageService
+    private readonly coverService: CoverImageService,
+    private readonly toastr: ToastrService
   ) {}
 
   ngOnInit(): void {
@@ -117,7 +119,7 @@ export class LibraryComponent implements OnInit {
           this.loading = false;
         },
         error: (err) => {
-          console.error('Error loading library:', err);
+          this.toastr.error('Failed to load your library', 'Error');
           this.error = 'Failed to load library. Please try again.';
           this.loading = false;
         }
@@ -136,7 +138,7 @@ export class LibraryComponent implements OnInit {
           }
         },
         error: (err) => {
-          console.error('Error loading stats:', err);
+          this.toastr.error('Failed to load reading statistics', 'Error');
         }
       });
   }
@@ -189,15 +191,17 @@ export class LibraryComponent implements OnInit {
     }).subscribe({
       next: (response) => {
         if (response.success) {
+          this.toastr.success(`Status updated to ${newStatus}`, 'Success');
           this.loadStats(); // Refresh stats
         } else {
           // Revert on error
           entry.status = oldStatus;
+          this.toastr.error('Failed to update status', 'Error');
           this.error = 'Failed to update status';
         }
       },
       error: (err) => {
-        console.error('Error updating status:', err);
+        this.toastr.error('Failed to update status. Please try again.', 'Error');
         entry.status = oldStatus; // Revert on error
         this.error = 'Failed to update status. Please try again.';
       }
@@ -227,16 +231,18 @@ export class LibraryComponent implements OnInit {
     }).subscribe({
       next: (response) => {
         if (response.success) {
+          this.toastr.success(`Removed "${entry.manga_title}" from library`, 'Success');
           this.loadStats(); // Refresh stats
         } else {
           // Revert on error
           this.library = originalLibrary;
           this.filterLibrary();
+          this.toastr.error('Failed to remove from library', 'Error');
           this.error = 'Failed to remove from library';
         }
       },
       error: (err) => {
-        console.error('Error removing from library:', err);
+        this.toastr.error('Failed to remove from library. Please try again.', 'Error');
         this.library = originalLibrary; // Revert on error
         this.filterLibrary();
         this.error = 'Failed to remove from library. Please try again.';

@@ -1,4 +1,5 @@
 /* Global styles and theme variables */
+@import 'ngx-toastr/toastr';
 
 :root {
   /* Light theme colors */

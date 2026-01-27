@@ -1,6 +1,7 @@
 import { Component, signal } from '@angular/core';
 import { Router } from '@angular/router';
 import { FormsModule } from '@angular/forms';
+import { ToastrService } from 'ngx-toastr';
 
 import { AuthService } from '../auth.service';
 
@@ -18,8 +19,9 @@ export class LoginComponent {
   error = signal('');
 
   constructor(
-    private authService: AuthService,
-    private router: Router
+    private readonly authService: AuthService,
+    private readonly router: Router,
+    private readonly toastr: ToastrService
   ) {}
 
   async onSubmit() {
@@ -35,12 +37,14 @@ export class LoginComponent {
       const result = await this.authService.login(this.username(), this.password());
       
       if (result.success) {
+        this.toastr.success(`Welcome back, ${this.username()}!`, 'Login Successful');
         this.router.navigate(['/home']);
       } else {
         this.error.set(result.error || 'Invalid username or password');
+        this.toastr.error(result.error || 'Invalid username or password', 'Login Failed');
       }
     } catch (error) {
-      console.error('Unexpected login error:', error);
+      this.toastr.error('An unexpected error occurred during login', 'Error');
       this.error.set('An unexpected error occurred during login');
     } finally {
       this.loading.set(false);
@@ -52,7 +56,7 @@ export class LoginComponent {
   }
 
   continueAsGuest() {
-    console.log('continueAsGuest clicked, navigating to /library');
+    this.toastr.info('Browsing in demo mode', 'Guest Mode');
     // Navigate directly to library in demo mode without authentication
     this.router.navigate(['/library']);
   }

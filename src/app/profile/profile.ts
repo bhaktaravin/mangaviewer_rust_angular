@@ -2,6 +2,7 @@ import { Component, computed, OnInit } from '@angular/core';
 import { Router, RouterModule } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { HttpClient } from '@angular/common/http';
+import { ToastrService } from 'ngx-toastr';
 
 import { AuthService } from '../auth.service';
 
@@ -32,7 +33,8 @@ export class ProfileComponent implements OnInit {
   constructor(
     private readonly authService: AuthService,
     private readonly router: Router,
-    private readonly http: HttpClient
+    private readonly http: HttpClient,
+    private readonly toastr: ToastrService
   ) {}
 
   ngOnInit(): void {
@@ -56,7 +58,7 @@ export class ProfileComponent implements OnInit {
           }
         },
         error: (err) => {
-          console.error('Error loading stats:', err);
+          this.toastr.error('Failed to load reading statistics', 'Error');
         }
       });
   }
@@ -67,6 +69,6 @@ export class ProfileComponent implements OnInit {
 
   editProfile() {
     // TODO: Implement profile editing functionality
-    console.log('Edit profile functionality to be implemented');
+    this.toastr.info('Profile editing coming soon!', 'Feature Not Available');
   }
 }

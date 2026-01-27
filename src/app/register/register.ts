@@ -1,6 +1,7 @@
 import { Component, signal } from '@angular/core';
 import { Router } from '@angular/router';
 import { FormsModule } from '@angular/forms';
+import { ToastrService } from 'ngx-toastr';
 
 import { AuthService } from '../auth.service';
 
@@ -20,8 +21,9 @@ export class RegisterComponent {
   error = signal('');
 
   constructor(
-    private authService: AuthService,
-    private router: Router
+    private readonly authService: AuthService,
+    private readonly router: Router,
+    private readonly toastr: ToastrService
   ) {}
 
   async onSubmit() {
@@ -51,12 +53,14 @@ export class RegisterComponent {
       );
       
       if (result.success) {
+        this.toastr.success(`Welcome, ${this.username()}! Your account has been created.`, 'Registration Successful');
         this.router.navigate(['/home']);
       } else {
         this.error.set(result.error || 'Registration failed. Please try again.');
+        this.toastr.error(result.error || 'Registration failed. Please try again.', 'Registration Failed');
       }
     } catch (error) {
-      console.error('Unexpected registration error:', error);
+      this.toastr.error('An unexpected error occurred during registration', 'Error');
       this.error.set('An unexpected error occurred during registration');
     } finally {
       this.loading.set(false);
