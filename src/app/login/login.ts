@@ -44,6 +44,7 @@ export class LoginComponent {
         this.toastr.error(result.error || 'Invalid username or password', 'Login Failed');
       }
     } catch (error) {
+      console.error('Login error:', error);
       this.toastr.error('An unexpected error occurred during login', 'Error');
       this.error.set('An unexpected error occurred during login');
     } finally {

@@ -76,7 +76,7 @@ export class AuthService {
         };
         
         this.currentUser.set(user);
-        this.isAuthenticated.set(true);
+        this.isAuthenticatedSignal.set(true);
         localStorage.setItem('currentUser', JSON.stringify(user));
         localStorage.setItem('authToken', response.token);
         
@@ -118,7 +118,7 @@ export class AuthService {
         };
         
         this.currentUser.set(user);
-        this.isAuthenticated.set(true);
+        this.isAuthenticatedSignal.set(true);
         localStorage.setItem('currentUser', JSON.stringify(user));
         localStorage.setItem('authToken', response.token);
         
@@ -141,23 +141,6 @@ export class AuthService {
         return { success: false, error: 'Invalid registration data. Please check your inputs.' };
       } else if (isStatusError(error, 409)) {
         return { success: false, error: 'Username or email already exists.' };
-      }
-      function isApiError(error: unknown): error is { error: { message: string } } {
-        return (
-          typeof error === 'object' &&
-          error !== null &&
-          'error' in error &&
-          typeof (error as { error?: { message?: unknown } }).error?.message === 'string'
-        );
-      }
-
-      function isStatusError(error: unknown, status: number): error is { status: number } {
-        return (
-          typeof error === 'object' &&
-          error !== null &&
-          'status' in error &&
-          (typeof (error as { status?: unknown }).status === 'number' && (error as { status: number }).status === status)
-        );
       }
       return { 
         success: false, 

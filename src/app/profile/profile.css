@@ -81,7 +81,7 @@
   border-left: 4px solid #667eea;
 }
 
-.info-item label {
+.info-item .info-label {
   font-weight: 600;
   color: #555;
 }

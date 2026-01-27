@@ -63,7 +63,7 @@
             </div>
             
             <div class="manga-info">
-              <h4 class="manga-title">{{ manga.attributes?.title?.['en'] || 'Unknown Title' }}</h4>
+              <h4 class="manga-title">{{ manga.attributes.title?.['en'] || 'Unknown Title' }}</h4>
               
               <p class="manga-author">
                 <span class="label">Author:</span>
@@ -74,7 +74,7 @@
                 Unknown
               </p>
               <p class="manga-description">
-                {{ (manga.attributes?.description?.['en'] && manga.attributes?.description?.['en'].length > 100) ? (manga.attributes?.description?.['en'] | slice:0:100) + '...' : manga.attributes?.description?.['en'] || '' }}
+                {{ (manga.attributes.description?.['en'] && manga.attributes.description['en'].length > 100) ? (manga.attributes.description['en'] | slice:0:100) + '...' : manga.attributes.description?.['en'] || '' }}
               </p>
               
               <div class="manga-actions">
@@ -146,19 +146,4 @@
   
   <!-- Disclaimer for manga content attribution -->
   <app-disclaimer></app-disclaimer>
-
-  <!-- Manga Detail Modal -->
-  @if (showDetails() && selectedManga()) {
-    <div class="detail-modal-overlay" (click)="hideMangaDetails()">
-      <div class="detail-modal-content" (click)="$event.stopPropagation()">
-        <div class="detail-modal-header">
-          <h3>📖 Manga Details</h3>
-          <button class="detail-modal-close" (click)="hideMangaDetails()">×</button>
-        </div>
-        <div class="detail-modal-body">
-          <app-manga-detail [manga]="selectedManga()"></app-manga-detail>
-        </div>
-      </div>
-    </div>
-  }
 </div>

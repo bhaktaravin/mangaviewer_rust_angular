@@ -101,7 +101,13 @@
   <div class="library-grid" *ngIf="!loading && !error && filteredLibrary.length > 0">
     <div class="library-card" *ngFor="let entry of filteredLibrary">
       <!-- Cover Image -->
-      <div class="card-cover" (click)="viewManga(entry.manga_id)">
+      <div class="card-cover" 
+           (click)="viewManga(entry.manga_id)"
+           (keydown.enter)="viewManga(entry.manga_id)"
+           (keydown.space)="viewManga(entry.manga_id)"
+           tabindex="0"
+           role="button"
+           [attr.aria-label]="'View details for ' + entry.manga_title">
         <img 
           [src]="getCoverUrl(entry.manga_id) | async" 
           [alt]="entry.manga_title"
@@ -121,7 +127,13 @@
 
       <!-- Card Content -->
       <div class="card-content">
-        <h3 class="card-title" (click)="viewManga(entry.manga_id)">
+        <h3 class="card-title" 
+            (click)="viewManga(entry.manga_id)"
+            (keydown.enter)="viewManga(entry.manga_id)"
+            (keydown.space)="viewManga(entry.manga_id)"
+            tabindex="0"
+            role="button"
+            [attr.aria-label]="'View ' + entry.manga_title">
           {{ entry.manga_title }}
         </h3>
 

@@ -110,10 +110,10 @@ export class MangaDetailComponent implements OnInit {
   get coverUrl() { return this._coverUrl(); }
 
   ngOnInit() {
-    // Deprecated: getCurrentNavigation() is used for compatibility
-    const navigation = this.router.getCurrentNavigation();
-    if (navigation?.extras.state?.['manga']) {
-      this.manga = navigation.extras.state['manga'];
+    // Check if manga was passed via router state
+    const state = history.state as { manga?: Manga };
+    if (state?.manga) {
+      this.manga = state.manga;
       this.initializeManga();
     } else {
       const mangaId = this.route.snapshot.paramMap.get('id');
@@ -163,6 +163,7 @@ export class MangaDetailComponent implements OnInit {
         this._error.set('No chapters found for this manga');
       }
     } catch (error) {
+      console.error('Failed to load chapters:', error);
       this.toastr.error('Failed to load chapters', 'Error');
       this._error.set('Failed to load chapters');
     } finally {
@@ -254,6 +255,7 @@ export class MangaDetailComponent implements OnInit {
         this._error.set((response as any)?.error || 'Download failed');
       }
     } catch (error) {
+      console.error('Failed to download chapter:', error);
       this.toastr.error('Failed to download chapter', 'Error');
       this._error.set('Failed to download chapter');
     } finally {

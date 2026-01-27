@@ -110,8 +110,8 @@
 }
 
 .status-filter-btn.active {
-  border-color: #4caf50;
-  background: #4caf50;
+  border-color: #2e7d32;
+  background: #2e7d32;
   color: white;
 }
 
@@ -188,7 +188,7 @@
 
 .retry-btn {
   padding: 0.75rem 2rem;
-  background: #4caf50;
+  background: #2e7d32;
   color: white;
   border: none;
   border-radius: 8px;
@@ -198,7 +198,7 @@
 }
 
 .retry-btn:hover {
-  background: #45a049;
+  background: #1b5e20;
 }
 
 /* Empty State */
@@ -226,7 +226,7 @@
 
 .browse-btn, .clear-btn {
   padding: 0.75rem 2rem;
-  background: #4caf50;
+  background: #2e7d32;
   color: white;
   border: none;
   border-radius: 8px;
@@ -363,7 +363,7 @@
 
 .status-badge.plantoread {
   background: #fff3e0;
-  color: #e65100;
+  color: #bf360c;
 }
 
 .status-badge.onhold {
@@ -413,12 +413,12 @@
 }
 
 .action-btn.primary {
-  background: #4caf50;
+  background: #2e7d32;
   color: white;
 }
 
 .action-btn.primary:hover {
-  background: #45a049;
+  background: #1b5e20;
 }
 
 .action-btn.secondary {

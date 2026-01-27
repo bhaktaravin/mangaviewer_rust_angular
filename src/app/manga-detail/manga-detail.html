@@ -101,10 +101,15 @@
 
   <!-- Download Modal -->
   @if (showDownloadModal) {
-    <div class="modal-overlay" (click)="closeDownloadModal()">
+    <div class="modal-overlay" 
+         (click)="closeDownloadModal()"
+         (keydown.escape)="closeDownloadModal()"
+         role="dialog"
+         aria-modal="true"
+         aria-labelledby="modal-title">
       <div class="modal-content" (click)="$event.stopPropagation()">
         <div class="modal-header">
-          <h3>💾 Download Chapter</h3>
+          <h3 id="modal-title">💾 Download Chapter</h3>
           <button class="modal-close" (click)="closeDownloadModal()">×</button>
         </div>
         <div class="modal-body">

@@ -60,6 +60,7 @@ export class RegisterComponent {
         this.toastr.error(result.error || 'Registration failed. Please try again.', 'Registration Failed');
       }
     } catch (error) {
+      console.error('Registration error:', error);
       this.toastr.error('An unexpected error occurred during registration', 'Error');
       this.error.set('An unexpected error occurred during registration');
     } finally {
