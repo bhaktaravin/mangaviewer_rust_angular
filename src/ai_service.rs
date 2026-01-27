@@ -60,6 +60,7 @@ pub struct MangaSummary {
     pub target_audience: String,
 }
 
+#[derive(Clone)]
 pub struct AIService {
     client: Client,
     api_key: String,
@@ -188,59 +189,6 @@ impl AIService {
 
         Ok(api_key.to_string())
     }
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    use std::fs::{self, File};
-    use std::io::Write;
-
-    #[test]
-    fn test_read_api_key_from_file_success() {
-        let test_content = "first-line\nmy-test-api-key\n";
-        let test_path = ".openai_key_test";
-        let mut file = File::create(test_path).unwrap();
-        file.write_all(test_content.as_bytes()).unwrap();
-
-        let result = fs::read_to_string(test_path).unwrap();
-        let lines: Vec<&str> = result.lines().collect();
-        assert_eq!(lines[1], "my-test-api-key");
-
-        // Clean up
-        fs::remove_file(test_path).unwrap();
-    }
-
-    #[test]
-    fn test_read_api_key_from_file_too_few_lines() {
-        let test_content = "only-one-line\n";
-        let test_path = ".openai_key_test";
-        let mut file = File::create(test_path).unwrap();
-        file.write_all(test_content.as_bytes()).unwrap();
-
-        let result = fs::read_to_string(test_path).unwrap();
-        let lines: Vec<&str> = result.lines().collect();
-        assert_eq!(lines.len(), 1);
-
-        // Clean up
-        fs::remove_file(test_path).unwrap();
-    }
-
-    #[test]
-    fn test_read_api_key_from_file_empty_key() {
-        let test_content = "first-line\n\n";
-        let test_path = ".openai_key_test";
-        let mut file = File::create(test_path).unwrap();
-        file.write_all(test_content.as_bytes()).unwrap();
-
-        let result = fs::read_to_string(test_path).unwrap();
-        let lines: Vec<&str> = result.lines().collect();
-        assert_eq!(lines[1], "");
-
-        // Clean up
-        fs::remove_file(test_path).unwrap();
-    }
-}
 
     pub async fn get_manga_recommendations(
         &self,

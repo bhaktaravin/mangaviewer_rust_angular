@@ -154,6 +154,9 @@ pub struct MangaService {
 }
 
 impl MangaService {
+    pub fn db(&self) -> &Database {
+        &self.db
+    }
     /// Update embeddings for all manga in the database using Ollama
     pub async fn update_all_manga_embeddings(
         &self,
@@ -163,7 +166,7 @@ impl MangaService {
         let collection = self.manga_collection();
         let mut cursor = collection.find(doc! {}).await?;
         while cursor.advance().await? {
-            let mut manga = cursor.deserialize_current()?;
+            let manga = cursor.deserialize_current()?;
             let text = format!(
                 "{} {}",
                 manga.title.clone().unwrap_or_default(),
@@ -233,17 +236,57 @@ impl MangaService {
         use mongodb::bson::doc;
         use mongodb::{options::IndexOptions, IndexModel};
 
+        // Manga ID index for fast lookup
         let manga_id_index = IndexModel::builder()
             .keys(doc! { "manga_id": 1 })
-            .options(IndexOptions::builder().sparse(true).build()) // Use sparse instead of unique
+            .options(IndexOptions::builder().sparse(true).build())
             .build();
 
-        let title_index = IndexModel::builder().keys(doc! { "title": "text" }).build();
+        // Text index for title, description, and author for full-text search
+        let title_index = IndexModel::builder()
+            .keys(doc! { 
+                "title": "text", 
+                "description": "text",
+                "author": "text"
+            })
+            .build();
 
-        let tags_index = IndexModel::builder().keys(doc! { "tags": 1 }).build();
+        // Tags index for filtering
+        let tags_index = IndexModel::builder()
+            .keys(doc! { "tags": 1 })
+            .build();
+
+        // Author index for filtering by author
+        let author_index = IndexModel::builder()
+            .keys(doc! { "author": 1 })
+            .build();
+
+        // Status index for filtering by status
+        let status_index = IndexModel::builder()
+            .keys(doc! { "status": 1 })
+            .build();
+
+        // Compound index for updated_at sorting (frequently used)
+        let updated_at_index = IndexModel::builder()
+            .keys(doc! { "updated_at": -1 })
+            .build();
+
+        // Vector index for semantic search (if MongoDB Atlas is used)
+        let embedding_index = IndexModel::builder()
+            .keys(doc! { "embedding": 1 })
+            .options(IndexOptions::builder().sparse(true).build())
+            .build();
 
         collection
-            .create_indexes(vec![manga_id_index, title_index, tags_index])
+            .create_indexes(vec![
+                manga_id_index,
+                title_index,
+                tags_index,
+                author_index,
+                status_index,
+                updated_at_index,
+                embedding_index,
+            ])
             .await?;
         Ok(())
     }

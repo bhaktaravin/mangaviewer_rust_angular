@@ -1,8 +1,9 @@
 use axum::{
-    extract::{Path, Query},
+    extract::{Path, Query, State},
     http::header::{AUTHORIZATION, CONTENT_TYPE},
     http::Method,
     http::StatusCode,
+    middleware,
     response::IntoResponse,
     routing::{get, post},
     Router,
@@ -16,16 +17,20 @@ use std::net::SocketAddr;
 use std::path::Path as StdPath;
 use tokio::net::TcpListener;
 use tower_http::cors::CorsLayer;
+use tower_http::services::ServeDir;
 use tracing_subscriber;
+use utoipa::OpenApi;
 
 mod ai_service;
 mod api;
 mod auth_mongodb;
 mod manga_service;
+mod app_middleware;
+mod pagination;
+mod validation;
 
 use ai_service::AIService;
 use auth_mongodb::{login_handler, logout_handler, register_handler, AuthService};
-use axum::extract::State;
 use manga_service::{
     get_manga_handler, list_manga_handler, save_manga_handler, search_manga_handler,
     semantic_search_handler, MangaService,
@@ -34,7 +39,7 @@ use manga_service::{
 // --- HEALTH ENDPOINT ---
 async fn health_handler(State(manga_service): State<MangaService>) -> impl IntoResponse {
     // Check DB connectivity
-    let db_status = match manga_service.db.list_collection_names(None).await {
+    let db_status = match manga_service.db().list_collection_names().await {
         Ok(_) => "ok",
         Err(_) => "error",
     };
@@ -409,6 +414,13 @@ async fn root_handler() -> impl IntoResponse {
     )
 }
 
+// --- OpenAPI Documentation ---
+#[derive(OpenApi)]
+#[openapi(
+    components(schemas(crate::api::ApiError))
+)]
+struct ApiDoc;
+
 #[tokio::main]
 async fn main() {
     // Initialize structured logging
@@ -484,6 +496,7 @@ async fn main() {
         .route("/api/manga/:manga_id/chapters", get(chapters_handler))
         .route("/api/manga/download", get(download_handler))
         .route("/api/manga/download-files", get(download_files_handler))
+        .nest_service("/api-doc", ServeDir::new("public"))
         .merge(auth_routes)
         .merge(manga_routes)
         .merge(admin_routes)

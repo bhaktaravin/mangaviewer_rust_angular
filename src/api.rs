@@ -2,10 +2,11 @@ use reqwest::Client;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use urlencoding;
+use utoipa::ToSchema;
 
 // --- API Response Structs ---
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, ToSchema)]
 pub struct ApiError {
     pub error: String,
     pub message: Option<String>,
@@ -321,6 +322,9 @@ mod tests {
         }
     }
 
+    #[test]
+    fn test_has_english_content() {
+        let manga = create_test_manga(Some("Naruto"), None, None);
         assert!(MangaDexClient::has_english_content(&manga));
     }
 

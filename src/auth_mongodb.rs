@@ -192,7 +192,7 @@ impl AuthService {
         });
 
         // Create indexes for better performance and uniqueness
-        let users_collection = database.collection::<User>("users");
+        let _users_collection = database.collection::<User>("users");
         tracing::info!("🔧 Creating database indexes...");
 
         // Create the AuthService temporarily to call the method

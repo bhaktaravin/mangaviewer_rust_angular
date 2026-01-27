@@ -38,7 +38,16 @@ uuid = { version = "1.10", features = ["v4", "serde"] }
 chrono = { version = "0.4", features = ["serde"] }
 
 # HTTP and CORS
-tower-http = { version = "0.5", features = ["cors"] }
+
+# OpenAPI/Swagger documentation
+utoipa = "4"
+utoipa-swagger-ui = { version = "4", features = ["axum"] }
+tower-http = { version = "0.5", features = ["cors", "fs"] }
 
 # Optional: Environment variables for base URLs or API keys
 # dotenvy = "0.15"
+
+# Rate limiting and security
+tower = { version = "0.4", features = ["limit", "buffer"] }
+regex = "1.10"
+once_cell = "1.19"
