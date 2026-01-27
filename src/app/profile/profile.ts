@@ -1,4 +1,4 @@
-import { Component, computed } from '@angular/core';
+import { Component, computed, OnInit } from '@angular/core';
 import { Router, RouterModule } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { HttpClient } from '@angular/common/http';
@@ -24,22 +24,24 @@ interface ReadingStats {
   templateUrl: './profile.html',
   styleUrl: './profile.css'
 })
-export class ProfileComponent {
+export class ProfileComponent implements OnInit {
   user = computed(() => this.authService.user());
   isAuthenticated = computed(() => this.authService.authenticated());
   stats: ReadingStats | null = null;
 
   constructor(
-    private authService: AuthService,
-    private router: Router,
-    private http: HttpClient
-  ) {
+    private readonly authService: AuthService,
+    private readonly router: Router,
+    private readonly http: HttpClient
+  ) {}
+
+  ngOnInit(): void {
     // Redirect to login if not authenticated
     if (!this.isAuthenticated()) {
       this.router.navigate(['/login']);
-    } else {
-      this.loadStats();
+      return;
     }
+    this.loadStats();
   }
 
   loadStats(): void {

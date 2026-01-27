@@ -33,16 +33,16 @@ export interface User {
   providedIn: 'root'
 })
 export class AuthService {
-  private currentUser = signal<User | null>(null);
-  private isAuthenticated = signal<boolean>(false);
+  private readonly currentUser = signal<User | null>(null);
+  private readonly isAuthenticatedSignal = signal<boolean>(false);
 
   // Public readonly signals for components to subscribe to
   public readonly user = this.currentUser.asReadonly();
-  public readonly authenticated = this.isAuthenticated.asReadonly();
+  public readonly authenticated = this.isAuthenticatedSignal.asReadonly();
 
   constructor(
-    private router: Router,
-    private apiService: Apiservice
+    private readonly router: Router,
+    private readonly apiService: Apiservice
   ) {
     // Check if user is already logged in (from localStorage)
     const savedUser = localStorage.getItem('currentUser');
@@ -50,8 +50,12 @@ export class AuthService {
     
     if (savedUser && authToken) {
       this.currentUser.set(JSON.parse(savedUser));
-      this.isAuthenticated.set(true);
+      this.isAuthenticatedSignal.set(true);
     }
+  }
+
+  isAuthenticated(): boolean {
+    return this.isAuthenticatedSignal();
   }
 
   getUserId(): string | null {
@@ -174,7 +178,7 @@ export class AuthService {
     
     // Clear local state regardless of API call result
     this.currentUser.set(null);
-    this.isAuthenticated.set(false);
+    this.isAuthenticatedSignal.set(false);
     localStorage.removeItem('currentUser');
     localStorage.removeItem('authToken');
     this.router.navigate(['/login']);

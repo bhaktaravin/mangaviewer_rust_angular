@@ -34,6 +34,7 @@ interface LibraryResponse {
 interface ReadingStats {
   total_manga: number;
   by_status: {
+    [key: string]: number;
     PlanToRead: number;
     Reading: number;
     Completed: number;
@@ -71,9 +72,9 @@ export class LibraryComponent implements OnInit {
   ];
 
   constructor(
-    private http: HttpClient,
-    private auth: AuthService,
-    private router: Router
+    private readonly http: HttpClient,
+    private readonly auth: AuthService,
+    private readonly router: Router
   ) {}
 
   ngOnInit(): void {
@@ -188,9 +189,10 @@ export class LibraryComponent implements OnInit {
   continueReading(entry: LibraryEntry): void {
     // Find the latest reading progress
     if (entry.reading_progress.length > 0) {
-      const latest = entry.reading_progress.sort((a, b) => 
+      const sorted = [...entry.reading_progress].sort((a, b) => 
         new Date(b.last_read).getTime() - new Date(a.last_read).getTime()
-      )[0];
+      );
+      const latest = sorted[0];
       
       // Navigate to the chapter with the last read page
       this.router.navigate(['/manga', entry.manga_id, 'chapter', latest.chapter_id], {
@@ -228,9 +230,10 @@ export class LibraryComponent implements OnInit {
       return 'Never';
     }
 
-    const latest = entry.reading_progress.sort((a, b) => 
+    const sorted = [...entry.reading_progress].sort((a, b) => 
       new Date(b.last_read).getTime() - new Date(a.last_read).getTime()
-    )[0];
+    );
+    const latest = sorted[0];
 
     return this.formatDate(latest.last_read);
   }
