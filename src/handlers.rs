@@ -50,6 +50,19 @@ pub struct GetStatsQuery {
     pub user_id: String,
 }
 
+#[derive(Deserialize)]
+pub struct UpdateStatusRequest {
+    pub user_id: String,
+    pub manga_id: String,
+    pub status: ReadingStatus,
+}
+
+#[derive(Deserialize)]
+pub struct RemoveFromLibraryRequest {
+    pub user_id: String,
+    pub manga_id: String,
+}
+
 /// Add manga to user's library
 pub async fn add_to_library_handler(
     State(state): State<AppState>,
@@ -150,6 +163,58 @@ pub async fn get_reading_stats_handler(
             Json(serde_json::json!({
                 "success": true,
                 "stats": stats
+            })),
+        ),
+        Err(e) => (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(serde_json::json!({
+                "success": false,
+                "error": e.to_string()
+            })),
+        ),
+    }
+}
+
+/// Update library entry status
+pub async fn update_status_handler(
+    State(state): State<AppState>,
+    Json(req): Json<UpdateStatusRequest>,
+) -> impl IntoResponse {
+    match state.progress_service
+        .update_library_status(&req.user_id, &req.manga_id, req.status)
+        .await
+    {
+        Ok(_) => (
+            StatusCode::OK,
+            Json(serde_json::json!({
+                "success": true,
+                "message": "Status updated"
+            })),
+        ),
+        Err(e) => (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(serde_json::json!({
+                "success": false,
+                "error": e.to_string()
+            })),
+        ),
+    }
+}
+
+/// Remove manga from library
+pub async fn remove_from_library_handler(
+    State(state): State<AppState>,
+    Json(req): Json<RemoveFromLibraryRequest>,
+) -> impl IntoResponse {
+    match state.progress_service
+        .remove_from_library(&req.user_id, &req.manga_id)
+        .await
+    {
+        Ok(_) => (
+            StatusCode::OK,
+            Json(serde_json::json!({
+                "success": true,
+                "message": "Removed from library"
             })),
         ),
         Err(e) => (

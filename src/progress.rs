@@ -317,6 +317,25 @@ impl ProgressService {
         Ok(())
     }
 
+    /// Remove manga from library
+    pub async fn remove_from_library(
+        &self,
+        user_id: &str,
+        manga_id: &str,
+    ) -> Result<(), Box<dyn std::error::Error>> {
+        let library = self.library_collection();
+
+        library
+            .delete_one(doc! {
+                "user_id": user_id,
+                "manga_id": manga_id
+            })
+            .await?;
+
+        tracing::info!("🗑️ Removed manga {} from user {} library", manga_id, user_id);
+        Ok(())
+    }
+
     /// Get reading statistics for user
     pub async fn get_reading_stats(
         &self,

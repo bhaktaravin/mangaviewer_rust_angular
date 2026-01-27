@@ -103,13 +103,9 @@
       <!-- Cover Image -->
       <div class="card-cover" (click)="viewManga(entry.manga_id)">
         <img 
-          *ngIf="entry.manga_cover" 
-          [src]="entry.manga_cover" 
+          [src]="getCoverUrl(entry.manga_id) | async" 
           [alt]="entry.manga_title"
           class="cover-image">
-        <div *ngIf="!entry.manga_cover" class="cover-placeholder">
-          <span class="placeholder-icon">📖</span>
-        </div>
         
         <!-- Progress Overlay -->
         <div class="progress-overlay" *ngIf="entry.reading_progress.length > 0">

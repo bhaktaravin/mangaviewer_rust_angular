@@ -37,6 +37,7 @@ use cache::CacheService;
 use handlers::{
     add_to_library_handler, advanced_search_handler, autocomplete_handler,
     get_library_handler, get_reading_stats_handler, update_progress_handler,
+    update_status_handler, remove_from_library_handler,
     AppState,
 };
 use manga_service::{
@@ -548,6 +549,8 @@ async fn main() {
         .route("/api/progress/library/add", post(add_to_library_handler))
         .route("/api/progress/update", post(update_progress_handler))
         .route("/api/progress/library", get(get_library_handler))
+        .route("/api/progress/library/status", post(update_status_handler))
+        .route("/api/progress/library/remove", post(remove_from_library_handler))
         .route("/api/progress/stats", get(get_reading_stats_handler))
         .with_state(app_state);
 

@@ -2,7 +2,10 @@ import { Component, signal, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
+import { HttpClient } from '@angular/common/http';
 import { Apiservice } from '../apiservice';
+import { AuthService } from '../auth.service';
+import { CoverImageService } from '../cover-image.service';
 import { Manga } from '../interfaces/manga';
 import { firstValueFrom } from 'rxjs';
 // Required interfaces
@@ -69,6 +72,9 @@ export class MangaDetailComponent implements OnInit {
   private readonly _downloadProgress = signal<DownloadProgress | null>(null);
   private readonly _downloading = signal(false);
   private readonly _selectedCommonPath = signal<string>('');
+  private readonly _addingToLibrary = signal(false);
+  private readonly _inLibrary = signal(false);
+  private readonly _coverUrl = signal<string | null>(null);
 
   commonPaths = [
     { label: '🏠 Home/Downloads', path: '/home/ravin/Downloads/manga' },
@@ -80,7 +86,9 @@ export class MangaDetailComponent implements OnInit {
   ];
 
   constructor(
-    private readonly apiService: Apiservice,
+    private readonly apiService: Ap,
+    private readonly http: HttpClient,
+    private readonly auth: AuthServiceiservice,
     private readonly route: ActivatedRoute,
     private readonly router: Router
   ) {}
@@ -92,6 +100,8 @@ export class MangaDetailComponent implements OnInit {
   get selectedChapter() { return this._selectedChapter(); }
   get downloadSettings() { return this._downloadSettings(); }
   get downloadProgress() { return this._downloadProgress(); }
+  get addingToLibrary() { return this._addingToLibrary(); }
+  get inLibrary() { return this._inLibrary(); }
   get downloading() { return this._downloading(); }
   get selectedCommonPath() { return this._selectedCommonPath(); }
 
@@ -113,6 +123,7 @@ export class MangaDetailComponent implements OnInit {
     const mangaData = this.manga;
     if (mangaData) {
       this.loadChapters();
+      this.loadCoverImage();
       this._downloadSettings.set({
         ...this.downloadSettings,
         mangaTitle: mangaData.attributes?.title?.['en'] || mangaData.attributes?.title?.['jp'] || 'Unknown'
@@ -123,6 +134,14 @@ export class MangaDetailComponent implements OnInit {
 
   private loadMangaById() {
     this.router.navigate(['/search']);
+  }
+
+  private loadCoverImage(): void {
+    if (!this.manga?.id) return;
+    
+    this.coverService.getCoverUrl(this.manga.id, '512').subscribe(url => {
+      this._coverUrl.set(url);
+    });
   }
 
   async loadChapters() {
@@ -261,4 +280,44 @@ export class MangaDetailComponent implements OnInit {
       });
     return `${settings.savePath}/${settings.mangaTitle}/${sanitizedTitle}/`;
   }
+
+  addToLibrary(): void {
+    if (!this.manga || !this.auth.isAuthenticated()) {
+      return;
+    }
+
+    const userId = this.auth.getUserId();
+    if (!userId) {
+      this._error.set('User not authenticated');
+      return;
+    }
+
+    this._addingToLibrary.set(true);
+    this._error.set('');
+
+    const mangaTitle = this.manga.attributes?.title?.['en'] || 
+                      this.manga.attributes?.title?.['jp'] || 
+                      'Unknown Title';
+
+    this.http.post<{success: boolean; message: string}>('/api/progress/library/add', {
+      user_id: userId,
+      manga_id: this.manga.id,
+      title: mangaTitle,
+      status: 'PlanToRead'
+    }).subscribe({
+      next: (response) => {
+        if (response.success) {
+          this._inLibrary.set(true);
+          this._addingToLibrary.set(false);
+        } else {
+          this._error.set('Failed to add to library');
+          this._addingToLibrary.set(false);
+        }
+      },
+      error: (err) => {
+        console.error('Error adding to library:', err);
+        this._error.set('Failed to add to library. Please try again.');
+        this._addingToLibrary.set(false);
+      }
+    });
   }

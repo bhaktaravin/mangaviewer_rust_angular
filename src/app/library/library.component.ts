@@ -2,7 +2,9 @@ import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { HttpClient } from '@angular/common/http';
 import { RouterModule, Router } from '@angular/router';
+import { Observable } from 'rxjs';
 import { AuthService } from '../auth.service';
+import { CoverImageService } from '../cover-image.service';
 import { FormsModule } from '@angular/forms';
 
 interface ReadingProgress {
@@ -74,7 +76,8 @@ export class LibraryComponent implements OnInit {
   constructor(
     private readonly http: HttpClient,
     private readonly auth: AuthService,
-    private readonly router: Router
+    private readonly router: Router,
+    private readonly coverService: CoverImageService
   ) {}
 
   ngOnInit(): void {
@@ -103,6 +106,10 @@ export class LibraryComponent implements OnInit {
         next: (response) => {
           if (response.success) {
             this.library = response.library;
+            
+            // Prefetch cover images for all manga in library
+            const mangaIds = this.library.map(entry => entry.manga_id);
+            this.coverService.prefetchCovers(mangaIds);
             this.filterLibrary();
           } else {
             this.error = 'Failed to load library';
@@ -163,23 +170,78 @@ export class LibraryComponent implements OnInit {
   }
 
   updateStatus(entry: LibraryEntry, newStatus: string): void {
-    // TODO: Implement API call to update status
+    const userId = this.auth.getUserId();
+    if (!userId) {
+      this.error = 'User not authenticated';
+      return;
+    }
+
+    // Update UI optimistically
+    const oldStatus = entry.status;
     entry.status = newStatus;
     entry.updated_at = new Date().toISOString();
     
-    // Refresh stats
-    this.loadStats();
+    // Call API to persist changes
+    this.http.post<{success: boolean; message: string}>('/api/progress/library/status', {
+      user_id: userId,
+      manga_id: entry.manga_id,
+      status: newStatus
+    }).subscribe({
+      next: (response) => {
+        if (response.success) {
+          this.loadStats(); // Refresh stats
+        } else {
+          // Revert on error
+          entry.status = oldStatus;
+          this.error = 'Failed to update status';
+        }
+      },
+      error: (err) => {
+        console.error('Error updating status:', err);
+        entry.status = oldStatus; // Revert on error
+        this.error = 'Failed to update status. Please try again.';
+      }
+    });
   }
 
   removeFromLibrary(entry: LibraryEntry): void {
     if (!confirm(`Remove "${entry.manga_title}" from your library?`)) {
       return;
     }
+
+    const userId = this.auth.getUserId();
+    if (!userId) {
+      this.error = 'User not authenticated';
+      return;
+    }
     
-    // TODO: Implement API call to remove from library
+    // Remove from UI optimistically
+    const originalLibrary = [...this.library];
     this.library = this.library.filter(e => e._id !== entry._id);
     this.filterLibrary();
-    this.loadStats();
+    
+    // Call API to persist changes
+    this.http.post<{success: boolean; message: string}>('/api/progress/library/remove', {
+      user_id: userId,
+      manga_id: entry.manga_id
+    }).subscribe({
+      next: (response) => {
+        if (response.success) {
+          this.loadStats(); // Refresh stats
+        } else {
+          // Revert on error
+          this.library = originalLibrary;
+          this.filterLibrary();
+          this.error = 'Failed to remove from library';
+        }
+      },
+      error: (err) => {
+        console.error('Error removing from library:', err);
+        this.library = originalLibrary; // Revert on error
+        this.filterLibrary();
+        this.error = 'Failed to remove from library. Please try again.';
+      }
+    });
   }
 
   viewManga(mangaId: string): void {
@@ -260,5 +322,9 @@ export class LibraryComponent implements OnInit {
   getStatusLabel(status: string): string {
     const option = this.statusOptions.find(o => o.value === status);
     return option ? option.label : status;
+  }
+
+  getCoverUrl(mangaId: string): Observable<string> {
+    return this.coverService.getCoverUrl(mangaId, '256');
   }
 }
