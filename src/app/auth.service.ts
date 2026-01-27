@@ -54,6 +54,11 @@ export class AuthService {
     }
   }
 
+  getUserId(): string | null {
+    const user = this.currentUser();
+    return user ? user.id : null;
+  }
+
   async login(username: string, password: string): Promise<{ success: boolean; error?: string }> {
     try {
       const loginRequest: LoginRequest = { username, password };

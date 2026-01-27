@@ -5,7 +5,7 @@ import { RegisterComponent } from "./register/register";
 import { ProfileComponent } from "./profile/profile";
 import { MangaSearchComponent } from "./manga-search/manga-search";
 import { MangaDetailComponent } from "./manga-detail/manga-detail.component";
-import { LibraryComponent } from "./library/library";
+import { LibraryComponent } from "./library/library.component";
 import { authGuard, guestGuard } from "./auth.guard";
 
 export const routes: Routes = [
@@ -14,7 +14,7 @@ export const routes: Routes = [
   { path: 'login', component: LoginComponent, canActivate: [guestGuard] },
   { path: 'register', component: RegisterComponent, canActivate: [guestGuard] },
   { path: 'profile', component: ProfileComponent, canActivate: [authGuard] },
-  { path: 'library', component: LibraryComponent },
+  { path: 'library', component: LibraryComponent, canActivate: [authGuard] },
   { path: 'search', component: MangaSearchComponent },
   { path: 'manga/:id', component: MangaDetailComponent },
   { path: '**', redirectTo: '/home' }

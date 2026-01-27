@@ -1,0 +1,190 @@
+<div class="library-container">
+  <!-- Header -->
+  <div class="library-header">
+    <h1>📚 My Library</h1>
+    <p class="subtitle">Track your manga reading progress</p>
+  </div>
+
+  <!-- Stats Cards -->
+  <div class="stats-grid" *ngIf="stats">
+    <div class="stat-card">
+      <div class="stat-icon">📚</div>
+      <div class="stat-info">
+        <div class="stat-value">{{ stats.total_manga }}</div>
+        <div class="stat-label">Total Manga</div>
+      </div>
+    </div>
+
+    <div class="stat-card reading">
+      <div class="stat-icon">📖</div>
+      <div class="stat-info">
+        <div class="stat-value">{{ stats.by_status.Reading }}</div>
+        <div class="stat-label">Currently Reading</div>
+      </div>
+    </div>
+
+    <div class="stat-card completed">
+      <div class="stat-icon">✅</div>
+      <div class="stat-info">
+        <div class="stat-value">{{ stats.by_status.Completed }}</div>
+        <div class="stat-label">Completed</div>
+      </div>
+    </div>
+
+    <div class="stat-card chapters">
+      <div class="stat-icon">📄</div>
+      <div class="stat-info">
+        <div class="stat-value">{{ stats.total_chapters_read }}</div>
+        <div class="stat-label">Chapters Read</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Filters -->
+  <div class="filters-section">
+    <div class="status-filters">
+      <button 
+        *ngFor="let status of statusOptions"
+        class="status-filter-btn"
+        [class.active]="selectedStatus === status.value"
+        (click)="onStatusChange(status.value)">
+        <span class="filter-icon">{{ status.icon }}</span>
+        <span class="filter-label">{{ status.label }}</span>
+        <span class="filter-count" *ngIf="stats && status.value !== 'All'">
+          {{ stats.by_status[status.value] || 0 }}
+        </span>
+      </button>
+    </div>
+
+    <div class="search-box">
+      <input 
+        type="text" 
+        placeholder="Search your library..." 
+        [(ngModel)]="searchQuery"
+        (ngModelChange)="onSearchChange()"
+        class="search-input">
+      <span class="search-icon">🔍</span>
+    </div>
+  </div>
+
+  <!-- Loading State -->
+  <div class="loading-state" *ngIf="loading">
+    <div class="spinner"></div>
+    <p>Loading your library...</p>
+  </div>
+
+  <!-- Error State -->
+  <div class="error-state" *ngIf="error && !loading">
+    <p class="error-message">{{ error }}</p>
+    <button class="retry-btn" (click)="loadLibrary()">Retry</button>
+  </div>
+
+  <!-- Empty State -->
+  <div class="empty-state" *ngIf="!loading && !error && filteredLibrary.length === 0 && library.length === 0">
+    <div class="empty-icon">📚</div>
+    <h2>Your library is empty</h2>
+    <p>Start adding manga to track your reading progress!</p>
+    <a routerLink="/manga-search" class="browse-btn">Browse Manga</a>
+  </div>
+
+  <!-- No Results State -->
+  <div class="empty-state" *ngIf="!loading && !error && filteredLibrary.length === 0 && library.length > 0">
+    <div class="empty-icon">🔍</div>
+    <h2>No manga found</h2>
+    <p>Try adjusting your filters or search query.</p>
+    <button class="clear-btn" (click)="selectedStatus = 'All'; searchQuery = ''; filterLibrary()">
+      Clear Filters
+    </button>
+  </div>
+
+  <!-- Library Grid -->
+  <div class="library-grid" *ngIf="!loading && !error && filteredLibrary.length > 0">
+    <div class="library-card" *ngFor="let entry of filteredLibrary">
+      <!-- Cover Image -->
+      <div class="card-cover" (click)="viewManga(entry.manga_id)">
+        <img 
+          *ngIf="entry.manga_cover" 
+          [src]="entry.manga_cover" 
+          [alt]="entry.manga_title"
+          class="cover-image">
+        <div *ngIf="!entry.manga_cover" class="cover-placeholder">
+          <span class="placeholder-icon">📖</span>
+        </div>
+        
+        <!-- Progress Overlay -->
+        <div class="progress-overlay" *ngIf="entry.reading_progress.length > 0">
+          <div class="progress-bar">
+            <div 
+              class="progress-fill" 
+              [style.width.%]="getProgressPercentage(entry)">
+            </div>
+          </div>
+          <span class="progress-text">{{ getProgressPercentage(entry) }}%</span>
+        </div>
+      </div>
+
+      <!-- Card Content -->
+      <div class="card-content">
+        <h3 class="card-title" (click)="viewManga(entry.manga_id)">
+          {{ entry.manga_title }}
+        </h3>
+
+        <!-- Status Badge -->
+        <div class="status-badge" [class]="entry.status.toLowerCase()">
+          <span class="status-icon">{{ getStatusIcon(entry.status) }}</span>
+          <span class="status-text">{{ getStatusLabel(entry.status) }}</span>
+        </div>
+
+        <!-- Progress Info -->
+        <div class="progress-info">
+          <span class="info-item">
+            <span class="info-icon">📄</span>
+            {{ getProgressInfo(entry) }}
+          </span>
+          <span class="info-item">
+            <span class="info-icon">🕐</span>
+            {{ getLastRead(entry) }}
+          </span>
+        </div>
+
+        <!-- Actions -->
+        <div class="card-actions">
+          <button 
+            class="action-btn primary"
+            *ngIf="entry.status === 'Reading' || entry.reading_progress.length > 0"
+            (click)="continueReading(entry)">
+            <span class="btn-icon">▶️</span>
+            Continue Reading
+          </button>
+
+          <button 
+            class="action-btn secondary"
+            *ngIf="entry.status !== 'Reading' && entry.reading_progress.length === 0"
+            (click)="viewManga(entry.manga_id)">
+            <span class="btn-icon">👁️</span>
+            View Details
+          </button>
+
+          <!-- Status Dropdown -->
+          <select 
+            class="status-select"
+            [(ngModel)]="entry.status"
+            (change)="updateStatus(entry, entry.status)">
+            <option value="Reading">📖 Reading</option>
+            <option value="Completed">✅ Completed</option>
+            <option value="PlanToRead">📋 Plan to Read</option>
+            <option value="OnHold">⏸️ On Hold</option>
+            <option value="Dropped">❌ Dropped</option>
+          </select>
+
+          <button 
+            class="action-btn danger"
+            (click)="removeFromLibrary(entry)"
+            title="Remove from library">
+            🗑️
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

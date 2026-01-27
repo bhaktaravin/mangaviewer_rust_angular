@@ -28,29 +28,53 @@
       </div>
 
       <div class="profile-section">
-        <h2>Manga Statistics</h2>
-        <div class="stats-grid">
+        <h2>📚 Reading Statistics</h2>
+        <div class="stats-grid" *ngIf="stats">
           <div class="stat-card">
-            <div class="stat-number">0</div>
-            <div class="stat-label">Manga Read</div>
+            <div class="stat-icon">📖</div>
+            <div class="stat-number">{{ stats.total_manga }}</div>
+            <div class="stat-label">Total Manga</div>
           </div>
-          <div class="stat-card">
-            <div class="stat-number">0</div>
-            <div class="stat-label">Favorites</div>
+          <div class="stat-card reading">
+            <div class="stat-icon">📗</div>
+            <div class="stat-number">{{ stats.by_status.Reading }}</div>
+            <div class="stat-label">Currently Reading</div>
           </div>
-          <div class="stat-card">
-            <div class="stat-number">0</div>
-            <div class="stat-label">Reading List</div>
+          <div class="stat-card completed">
+            <div class="stat-icon">✅</div>
+            <div class="stat-number">{{ stats.by_status.Completed }}</div>
+            <div class="stat-label">Completed</div>
           </div>
+          <div class="stat-card chapters">
+            <div class="stat-icon">📄</div>
+            <div class="stat-number">{{ stats.total_chapters_read }}</div>
+            <div class="stat-label">Chapters Read</div>
+          </div>
+          <div class="stat-card plan">
+            <div class="stat-icon">📋</div>
+            <div class="stat-number">{{ stats.by_status.PlanToRead }}</div>
+            <div class="stat-label">Plan to Read</div>
+          </div>
+          <div class="stat-card hold">
+            <div class="stat-icon">⏸️</div>
+            <div class="stat-number">{{ stats.by_status.OnHold }}</div>
+            <div class="stat-label">On Hold</div>
+          </div>
+        </div>
+        <div class="loading-stats" *ngIf="!stats">
+          <p>Loading statistics...</p>
         </div>
       </div>
 
       <div class="profile-actions">
+        <a routerLink="/library" class="btn btn-primary">
+          📚 View Library
+        </a>
         <button class="btn btn-secondary" (click)="editProfile()">
-          Edit Profile
+          ✏️ Edit Profile
         </button>
         <button class="btn btn-danger" (click)="logout()">
-          Logout
+          🚪 Logout
         </button>
       </div>
     </div>
