@@ -19,7 +19,7 @@ interface MangaDexResponse {
   providedIn: 'root'
 })
 export class CoverImageService {
-  private coverCache = new Map<string, string>();
+  private readonly coverCache = new Map<string, string>();
   private readonly placeholderUrl = 'https://via.placeholder.com/230x320/667eea/ffffff?text=No+Cover';
 
   constructor(private readonly http: HttpClient) {}

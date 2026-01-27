@@ -86,11 +86,12 @@ export class MangaDetailComponent implements OnInit {
   ];
 
   constructor(
-    private readonly apiService: Ap,
-    private readonly http: HttpClient,
-    private readonly auth: AuthServiceiservice,
+    private readonly apiService: Apiservice,
     private readonly route: ActivatedRoute,
-    private readonly router: Router
+    private readonly router: Router,
+    private readonly http: HttpClient,
+    private readonly auth: AuthService,
+    private readonly coverService: CoverImageService
   ) {}
 
   get chapters() { return this._chapters(); }
