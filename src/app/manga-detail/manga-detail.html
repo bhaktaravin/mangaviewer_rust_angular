@@ -2,8 +2,8 @@
   <!-- Manga Info Header -->
   <div class="manga-header">
     <div class="manga-cover">
-      @if (coverUrl) {
-        <img [src]="coverUrl" [alt]="manga?.attributes?.title?.['en'] || 'Manga Cover'" />
+      @if (coverUrl()) {
+        <img [src]="coverUrl()" [alt]="manga?.attributes?.title?.['en'] || 'Manga Cover'" />
       } @else {
         <div class="placeholder-cover">
           <span class="placeholder-text">📚</span>
