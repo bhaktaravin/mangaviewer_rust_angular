@@ -4,7 +4,7 @@ import { LoginComponent } from "./login/login";
 import { RegisterComponent } from "./register/register";
 import { ProfileComponent } from "./profile/profile";
 import { MangaSearchComponent } from "./manga-search/manga-search";
-import { MangaDetailComponent } from "./manga-detail/manga-detail.component";
+import { MangaDetailComponent } from "./manga-detail/manga-detail";
 import { LibraryComponent } from "./library/library.component";
 import { authGuard, guestGuard } from "./auth.guard";
 
