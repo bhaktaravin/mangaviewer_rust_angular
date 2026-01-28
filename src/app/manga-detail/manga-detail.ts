@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { HttpClient } from '@angular/common/http';
+import { Title } from '@angular/platform-browser';
 import { ToastrService } from 'ngx-toastr';
 import { Apiservice } from '../apiservice';
 import { AuthService } from '../auth.service';
@@ -93,7 +94,8 @@ export class MangaDetailComponent implements OnInit {
     private readonly http: HttpClient,
     private readonly auth: AuthService,
     private readonly coverService: CoverImageService,
-    private readonly toastr: ToastrService
+    private readonly toastr: ToastrService,
+    private readonly titleService: Title
   ) {}
 
   get chapters() { return this._chapters(); }
@@ -126,10 +128,12 @@ export class MangaDetailComponent implements OnInit {
   private async initializeManga() {
     const mangaData = this.manga;
     if (mangaData) {
+      const mangaTitle = mangaData.attributes?.title?.['en'] || mangaData.attributes?.title?.['jp'] || 'Unknown';
+      this.titleService.setTitle(`${mangaTitle} - Manga Viewer`);
       this.loadCoverImage();
       this._downloadSettings.set({
         ...this.downloadSettings,
-        mangaTitle: mangaData.attributes?.title?.['en'] || mangaData.attributes?.title?.['jp'] || 'Unknown'
+        mangaTitle: mangaTitle
       });
       this._selectedCommonPath.set('/home/ravin/Downloads/manga');
       await this.loadChapters();

@@ -1,7 +1,8 @@
 
 
-import { Component, signal } from '@angular/core';
+import { Component, signal, OnInit } from '@angular/core';
 import { Router } from '@angular/router';
+import { Title } from '@angular/platform-browser';
 import { AuthService, User } from '../auth.service';
 import { Apiservice } from '../apiservice';
 import { Manga } from '../interfaces/manga';
@@ -14,7 +15,7 @@ import { Manga } from '../interfaces/manga';
   styleUrl: './home.css'
 })
 
-export class HomeComponent {
+export class HomeComponent implements OnInit {
   isAuthenticated = signal(false);
   user = signal<User | null>(null);
   recentManga = signal<Manga[]>([]);
@@ -28,7 +29,8 @@ export class HomeComponent {
   constructor(
     readonly authService: AuthService,
     readonly apiService: Apiservice,
-    readonly router: Router
+    readonly router: Router,
+    private readonly titleService: Title
   ) {
     this.isAuthenticated.set(this.authService.authenticated());
     if (this.isAuthenticated()) {
@@ -38,6 +40,10 @@ export class HomeComponent {
         this.loadUserData();
       }
     }
+  }
+
+  ngOnInit() {
+    this.titleService.setTitle('Manga Viewer - Your Personal Manga Library');
   }
 
   private loadUserData(): void {

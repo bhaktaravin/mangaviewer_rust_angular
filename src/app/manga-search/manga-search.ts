@@ -1,7 +1,8 @@
-import { Component, signal } from '@angular/core';
+import { Component, signal, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
+import { Title } from '@angular/platform-browser';
 import { Apiservice, MangaSearchRequest } from '../apiservice';
 import { DisclaimerComponent } from '../disclaimer/disclaimer.component';
 import { CoverImageService } from '../cover-image.service';
@@ -14,7 +15,7 @@ import { Manga } from '../interfaces/manga';
   templateUrl: './manga-search.html',
   styleUrl: './manga-search.css'
 })
-export class MangaSearchComponent {
+export class MangaSearchComponent implements OnInit {
   searchQuery = signal('');
   searchResults = signal<Manga[]>([]);
   loading = signal(false);
@@ -96,8 +97,13 @@ export class MangaSearchComponent {
   constructor(
     private readonly apiService: Apiservice, 
     private readonly router: Router,
-    private readonly coverService: CoverImageService
+    private readonly coverService: CoverImageService,
+    private readonly titleService: Title
   ) {}
+
+  ngOnInit() {
+    this.titleService.setTitle('Search Manga - Manga Viewer');
+  }
 
   async onSearch() {
     if (!this.searchQuery().trim()) {
