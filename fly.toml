@@ -3,18 +3,26 @@
 # See https://fly.io/docs/reference/configuration/ for information about how to use this file.
 #
 
-app = 'api-nameless-haze-4648'
+app = 'mangaviewer-backend'
 primary_region = 'lax'
 
 [build]
 
 [env]
-  PORT = '3000'
+  PORT = '8080'
   RUST_LOG = 'info'
-  MANGADX_API_URL = 'https://api.mangadx.org'
+  MANGADX_API_URL = 'https://api.mangadex.org'
+  DATABASE_NAME = 'mangaviewer_users'
+  MANGA_DATABASE_NAME = 'mangaviewer_manga'
+  
+# Secrets (set via: fly secrets set KEY=value):
+# MONGODB_URI - Users database connection string (auth, profiles)
+# MONGODB_URI_MANGA - Manga database connection string (library, progress)
+# JWT_SECRET - JWT signing secret
+# REDIS_URL - Optional Redis cache URL
 
 [http_service]
-  internal_port = 3000
+  internal_port = 8080
   force_https = true
   auto_stop_machines = 'stop'
   auto_start_machines = true

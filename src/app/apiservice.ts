@@ -87,7 +87,7 @@ export class Apiservice {
     if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
       return 'http://localhost:3000';
     }
-    return 'https://api-nameless-haze-4648.fly.dev';
+    return 'https://mangaviewer-backend.fly.dev';
   }
 
   private getAuthHeaders(): HttpHeaders {

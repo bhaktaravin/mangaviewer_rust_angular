@@ -495,21 +495,19 @@ async fn main() {
     // Initialize Search Service with caching
     let search_service = SearchService::new(cache_service.clone());
 
-    // --- Automatic embedding update on server start ---
-    let ai_service = match AIService::new() {
-        Ok(service) => service,
-        Err(e) => {
-            eprintln!("❌ Failed to initialize AIService: {}", e);
-            std::process::exit(1);
+    // --- Optional AI Service for embeddings (requires OPENAI_API_KEY) ---
+    let ai_service_result = AIService::new();
+    if let Ok(ai_service) = &ai_service_result {
+        let model = std::env::var("OLLAMA_MODEL").unwrap_or_else(|_| "llama2".to_string());
+        match manga_service
+            .update_all_manga_embeddings(&ai_service, &model)
+            .await
+        {
+            Ok(_) => println!("✅ Embeddings updated for all manga on startup"),
+            Err(e) => println!("⚠️  Failed to update embeddings on startup: {}", e),
         }
-    };
-    let model = std::env::var("OLLAMA_MODEL").unwrap_or_else(|_| "llama2".to_string());
-    match manga_service
-        .update_all_manga_embeddings(&ai_service, &model)
-        .await
-    {
-        Ok(_) => println!("✅ Embeddings updated for all manga on startup"),
-        Err(e) => println!("⚠️  Failed to update embeddings on startup: {}", e),
+    } else {
+        println!("ℹ️  AI Service not available (OPENAI_API_KEY not set) - semantic search disabled");
     }
 
     let cors = CorsLayer::new()
@@ -537,8 +535,7 @@ async fn main() {
         .route("/api/manga/list", get(list_manga_handler))
         .route("/api/manga/search", get(search_manga_handler))
         // .route("/api/manga/semantic-search", post(semantic_search_handler)) // Temporarily disabled
-        .with_state(manga_service.clone())
-        .with_state(ai_service.clone());
+        .with_state(manga_service.clone());
 
     let search_routes = Router::new()
         .route("/api/search/advanced", get(advanced_search_handler))
@@ -576,7 +573,11 @@ async fn main() {
         .with_state(manga_service)
         .layer(cors);
 
-    let addr = SocketAddr::from(([0, 0, 0, 0], 3000));
+    let port = std::env::var("PORT")
+        .unwrap_or_else(|_| "3000".to_string())
+        .parse::<u16>()
+        .expect("PORT must be a valid number");
+    let addr = SocketAddr::from(([0, 0, 0, 0], port));
     println!("🚀 Server listening on http://{}", addr);
     println!("📚 Manga API: http://{}/api/manga?title=query", addr);
     println!(

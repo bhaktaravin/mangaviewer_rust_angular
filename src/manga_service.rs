@@ -196,8 +196,10 @@ impl MangaService {
         Ok(())
     }
     pub async fn new() -> Result<Self, Box<dyn std::error::Error>> {
-        let mongodb_uri =
-            env::var("MONGODB_URI").map_err(|_| "MONGODB_URI environment variable not set")?;
+        // Use separate manga database URL if provided, otherwise fall back to main MONGODB_URI
+        let mongodb_uri = env::var("MONGODB_URI_MANGA")
+            .or_else(|_| env::var("MONGODB_URI"))
+            .map_err(|_| "Neither MONGODB_URI_MANGA nor MONGODB_URI environment variable is set")?;
 
         // Remove the default database from URI and use the manga database
         let base_uri = if mongodb_uri.contains('/') {
