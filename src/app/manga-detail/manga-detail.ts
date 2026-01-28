@@ -136,8 +136,42 @@ export class MangaDetailComponent implements OnInit {
     }
   }
 
-  private loadMangaById() {
-    this.router.navigate(['/search']);
+  private async loadMangaById() {
+    const mangaId = this.route.snapshot.paramMap.get('id');
+    if (!mangaId) {
+      this.router.navigate(['/search']);
+      return;
+    }
+
+    this._loading.set(true);
+    try {
+      // Try to fetch from backend or MangaDex API
+      const response = await firstValueFrom(this.http.get<any>(`https://api.mangadex.org/manga/${mangaId}`));
+      if (response?.data) {
+        this.manga = {
+          id: response.data.id,
+          type: 'manga',
+          attributes: {
+            title: response.data.attributes?.title || {},
+            description: response.data.attributes?.description || {},
+            status: response.data.attributes?.status || '',
+            originalLanguage: response.data.attributes?.originalLanguage || 'ja'
+          },
+          relationships: response.data.relationships || []
+        };
+        this.initializeManga();
+      } else {
+        this._error.set('Manga not found');
+        setTimeout(() => this.router.navigate(['/search']), 2000);
+      }
+    } catch (error) {
+      console.error('Failed to load manga:', error);
+      this.toastr.error('Failed to load manga details', 'Error');
+      this._error.set('Failed to load manga details');
+      setTimeout(() => this.router.navigate(['/search']), 2000);
+    } finally {
+      this._loading.set(false);
+    }
   }
 
   private loadCoverImage(): void {
