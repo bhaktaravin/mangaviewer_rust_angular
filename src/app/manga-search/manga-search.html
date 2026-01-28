@@ -58,8 +58,13 @@
       <div class="manga-grid">
         @for (manga of searchResults(); track $index) {
           <div class="manga-card">
-            <div class="manga-image placeholder">
-              <span class="placeholder-text">📚</span>
+            <div class="manga-image">
+              <img 
+                [src]="getCoverUrl(manga.id)" 
+                [alt]="manga.attributes.title?.['en'] || 'Manga cover'"
+                loading="lazy"
+                (error)="$event.target.src='https://via.placeholder.com/230x320/667eea/ffffff?text=No+Cover'"
+              />
             </div>
             
             <div class="manga-info">

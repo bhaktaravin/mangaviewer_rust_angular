@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { Apiservice, MangaSearchRequest } from '../apiservice';
 import { DisclaimerComponent } from '../disclaimer/disclaimer.component';
+import { CoverImageService } from '../cover-image.service';
 import { Manga } from '../interfaces/manga';
 
 @Component({
@@ -92,7 +93,11 @@ export class MangaSearchComponent {
   ];
 
 
-  constructor(private readonly apiService: Apiservice, private readonly router: Router) {}
+  constructor(
+    private readonly apiService: Apiservice, 
+    private readonly router: Router,
+    private readonly coverService: CoverImageService
+  ) {}
 
   async onSearch() {
     if (!this.searchQuery().trim()) {
@@ -219,6 +224,14 @@ export class MangaSearchComponent {
     if (event.key === 'Enter') {
       this.onSearch();
     }
+  }
+
+  getCoverUrl(mangaId: string): string {
+    let url = '';
+    this.coverService.getCoverUrl(mangaId, '256').subscribe(coverUrl => {
+      url = coverUrl;
+    });
+    return url || 'https://via.placeholder.com/230x320/667eea/ffffff?text=Loading...';
   }
 
   showMangaDetails(manga: Manga) {
