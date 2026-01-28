@@ -114,25 +114,25 @@ export class MangaDetailComponent implements OnInit {
     const state = history.state as { manga?: Manga };
     if (state?.manga) {
       this.manga = state.manga;
-      this.initializeManga();
+      void this.initializeManga();
     } else {
       const mangaId = this.route.snapshot.paramMap.get('id');
       if (mangaId) {
-        this.loadMangaById();
+        void this.loadMangaById();
       }
     }
   }
 
-  private initializeManga() {
+  private async initializeManga() {
     const mangaData = this.manga;
     if (mangaData) {
-      this.loadChapters();
       this.loadCoverImage();
       this._downloadSettings.set({
         ...this.downloadSettings,
         mangaTitle: mangaData.attributes?.title?.['en'] || mangaData.attributes?.title?.['jp'] || 'Unknown'
       });
       this._selectedCommonPath.set('/home/ravin/Downloads/manga');
+      await this.loadChapters();
     }
   }
 
@@ -159,7 +159,7 @@ export class MangaDetailComponent implements OnInit {
           },
           relationships: response.data.relationships || []
         };
-        this.initializeManga();
+        await this.initializeManga();
       } else {
         this._error.set('Manga not found');
         setTimeout(() => this.router.navigate(['/search']), 2000);
