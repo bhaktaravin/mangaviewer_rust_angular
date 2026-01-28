@@ -105,6 +105,8 @@ struct MangaQuery {
 struct ChapterQuery {
     chapter: Option<String>,
     lang: Option<String>,
+    #[serde(rename = "translatedLanguage[]")]
+    translated_language: Option<String>,
 }
 
 #[derive(Deserialize)]
@@ -172,7 +174,9 @@ async fn chapters_handler(
         query_params.push(format!("chapter={}", urlencoding::encode(&chapter)));
     }
 
-    if let Some(lang) = params.lang {
+    // Accept either lang or translatedLanguage[] parameter
+    let language = params.translated_language.or(params.lang);
+    if let Some(lang) = language {
         query_params.push(format!(
             "translatedLanguage[]={}",
             urlencoding::encode(&lang)
