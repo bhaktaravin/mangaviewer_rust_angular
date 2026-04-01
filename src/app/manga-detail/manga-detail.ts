@@ -8,9 +8,11 @@ import { ToastrService } from 'ngx-toastr';
 import { Apiservice } from '../apiservice';
 import { AuthService } from '../auth.service';
 import { CoverImageService } from '../cover-image.service';
+import { DisclaimerComponent } from '../disclaimer/disclaimer.component';
+import { MangaReaderComponent } from '../manga-reader';
 import { Manga } from '../interfaces/manga';
 import { firstValueFrom } from 'rxjs';
-// Required interfaces
+
 export interface Chapter {
   id: string;
   attributes: {
@@ -36,16 +38,11 @@ export interface DownloadSettings {
   mangaTitle: string;
 }
 
-export interface FileSystemHandle {
-  kind: 'file' | 'directory';
+export interface FileSystemDirectoryHandle {
+  kind: 'directory';
   name: string;
 }
 
-export interface FileSystemDirectoryHandle extends FileSystemHandle {
-  kind: 'directory';
-}
-
-// Extend globalThis interface for File System Access API
 declare global {
   interface GlobalThis {
     showDirectoryPicker?: () => Promise<FileSystemDirectoryHandle>;
@@ -55,40 +52,33 @@ declare global {
 @Component({
   selector: 'app-manga-detail',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, MangaReaderComponent, DisclaimerComponent],
   templateUrl: './manga-detail.html',
   styleUrl: './manga-detail.css'
 })
 export class MangaDetailComponent implements OnInit {
-openReaderModal(_t32: Chapter) {
-throw new Error('Method not implemented.');
-}
-showReaderModal(): any {
-throw new Error('Method not implemented.');
-}
-readerChapter() {
-throw new Error('Method not implemented.');
-}
-readerImages() {
-throw new Error('Method not implemented.');
-}
   manga: Manga | null = null;
-  private readonly _chapters = signal<Chapter[]>([]);
-  private readonly _loading = signal(false);
-  private readonly _error = signal('');
-  private readonly _showDownloadModal = signal(false);
-  private readonly _selectedChapter = signal<Chapter | null>(null);
-  private readonly _downloadSettings = signal<DownloadSettings>({
+
+  readonly chapters = signal<Chapter[]>([]);
+  readonly loading = signal(false);
+  readonly error = signal('');
+  readonly showDownloadModal = signal(false);
+  readonly selectedChapter = signal<Chapter | null>(null);
+  readonly downloadSettings = signal<DownloadSettings>({
     savePath: '/home/ravin/Downloads/manga',
     quality: 'high',
     mangaTitle: ''
   });
-  private readonly _downloadProgress = signal<DownloadProgress | null>(null);
-  private readonly _downloading = signal(false);
-  private readonly _selectedCommonPath = signal<string>('');
-  private readonly _addingToLibrary = signal(false);
-  private readonly _inLibrary = signal(false);
-  private readonly _coverUrl = signal<string | null>(null);
+  readonly downloadProgress = signal<DownloadProgress | null>(null);
+  readonly downloading = signal(false);
+  readonly selectedCommonPath = signal<string>('');
+  readonly addingToLibrary = signal(false);
+  readonly inLibrary = signal(false);
+  readonly coverUrl = signal<string | null>(null);
+  readonly showReaderModal = signal(false);
+  readonly readerImages = signal<string[]>([]);
+  readonly readerChapter = signal<Chapter | null>(null);
+  readonly readerLoading = signal(false);
 
   commonPaths = [
     { label: '🏠 Home/Downloads', path: '/home/ravin/Downloads/manga' },
@@ -98,7 +88,6 @@ throw new Error('Method not implemented.');
     { label: '⬇️ Temporary Downloads', path: '/tmp/manga_downloads' },
     { label: '✏️ Custom Location', path: 'custom' }
   ];
-closeReaderModal: any;
 
   constructor(
     private readonly apiService: Apiservice,
@@ -111,58 +100,35 @@ closeReaderModal: any;
     private readonly titleService: Title
   ) {}
 
-  get chapters() { return this._chapters(); }
-  get loading() { return this._loading(); }
-  get error() { return this._error(); }
-  get showDownloadModal() { return this._showDownloadModal(); }
-  get selectedChapter() { return this._selectedChapter(); }
-  get downloadSettings() { return this._downloadSettings(); }
-  get downloadProgress() { return this._downloadProgress(); }
-  get addingToLibrary() { return this._addingToLibrary(); }
-  get inLibrary() { return this._inLibrary(); }
-  get downloading() { return this._downloading(); }
-  get selectedCommonPath() { return this._selectedCommonPath(); }
-  get coverUrl() { return this._coverUrl(); }
+  // ── Getters removed — signals are public and called with () in template ──
 
   ngOnInit() {
-    // Check if manga was passed via router state
     const state = history.state as { manga?: Manga };
     if (state?.manga) {
       this.manga = state.manga;
       void this.initializeManga();
     } else {
       const mangaId = this.route.snapshot.paramMap.get('id');
-      if (mangaId) {
-        void this.loadMangaById();
-      }
+      if (mangaId) void this.loadMangaById();
     }
   }
 
   private async initializeManga() {
-    const mangaData = this.manga;
-    if (mangaData) {
-      const mangaTitle = mangaData.attributes?.title?.['en'] || mangaData.attributes?.title?.['jp'] || 'Unknown';
-      this.titleService.setTitle(`${mangaTitle} - Manga Viewer`);
-      this.loadCoverImage();
-      this._downloadSettings.set({
-        ...this.downloadSettings,
-        mangaTitle: mangaTitle
-      });
-      this._selectedCommonPath.set('/home/ravin/Downloads/manga');
-      await this.loadChapters();
-    }
+    if (!this.manga) return;
+    const mangaTitle = this.manga.attributes?.title?.['en'] || this.manga.attributes?.title?.['ja-ro'] || 'Unknown';
+    this.titleService.setTitle(`${mangaTitle} - Manga Viewer`);
+    this.coverService.getCoverUrl(this.manga.id, '512').subscribe(url => this.coverUrl.set(url));
+    this.downloadSettings.set({ ...this.downloadSettings(), mangaTitle });
+    this.selectedCommonPath.set('/home/ravin/Downloads/manga');
+    await this.loadChapters();
   }
 
   private async loadMangaById() {
     const mangaId = this.route.snapshot.paramMap.get('id');
-    if (!mangaId) {
-      this.router.navigate(['/search']);
-      return;
-    }
+    if (!mangaId) { this.router.navigate(['/search']); return; }
 
-    this._loading.set(true);
+    this.loading.set(true);
     try {
-      // Try to fetch from backend or MangaDex API
       const response = await firstValueFrom(this.http.get<any>(`https://api.mangadex.org/manga/${mangaId}`));
       if (response?.data) {
         this.manga = {
@@ -178,147 +144,194 @@ closeReaderModal: any;
         };
         await this.initializeManga();
       } else {
-        this._error.set('Manga not found');
+        this.error.set('Manga not found');
         setTimeout(() => this.router.navigate(['/search']), 2000);
       }
-    } catch (error) {
-      console.error('Failed to load manga:', error);
+    } catch {
       this.toastr.error('Failed to load manga details', 'Error');
-      this._error.set('Failed to load manga details');
+      this.error.set('Failed to load manga details');
       setTimeout(() => this.router.navigate(['/search']), 2000);
     } finally {
-      this._loading.set(false);
+      this.loading.set(false);
     }
-  }
-
-  private loadCoverImage(): void {
-    if (!this.manga?.id) return;
-    
-    this.coverService.getCoverUrl(this.manga.id, '512').subscribe(url => {
-      this._coverUrl.set(url);
-    });
   }
 
   async loadChapters() {
-    this._loading.set(true);
-    this._error.set('');
+    this.loading.set(true);
+    this.error.set('');
     try {
-      if (!this.manga) {
-        this._error.set('No manga loaded');
-        return;
-      }
+      if (!this.manga) { this.error.set('No manga loaded'); return; }
       const response = await firstValueFrom(this.apiService.getMangaChapters(this.manga.id));
       if (response && Array.isArray(response.data)) {
-        this._chapters.set(response.data as Chapter[]);
+        this.chapters.set(response.data as Chapter[]);
       } else {
-        this._error.set('No chapters found for this manga');
+        this.error.set('No chapters found for this manga');
       }
-    } catch (error) {
-      console.error('Failed to load chapters:', error);
+    } catch {
       this.toastr.error('Failed to load chapters', 'Error');
-      this._error.set('Failed to load chapters');
+      this.error.set('Failed to load chapters');
     } finally {
-      this._loading.set(false);
+      this.loading.set(false);
     }
   }
 
-  openDownloadModal(chapter: Chapter) {
-    this._selectedChapter.set(chapter);
-    this._showDownloadModal.set(true);
+  // ── Reader ──────────────────────────────────────────────
+  async openReaderModal(chapter: Chapter) {
+    this.readerChapter.set(chapter);
+    this.readerLoading.set(true);
+    this.readerImages.set([]);
+    this.showReaderModal.set(true);
+
+    try {
+      const response = await firstValueFrom(this.apiService.getChapterDownloadInfo(chapter.id));
+      const data = response as any;
+      const baseUrl: string = data?.baseUrl ?? '';
+      const hash: string = data?.chapter?.hash ?? '';
+      const pages: string[] = data?.chapter?.data ?? [];
+
+      if (baseUrl && hash && pages.length) {
+        this.readerImages.set(pages.map((p: string) => `${baseUrl}/data/${hash}/${p}`));
+      } else {
+        this.error.set('Could not load chapter pages');
+      }
+    } catch {
+      this.error.set('Failed to fetch chapter pages');
+    } finally {
+      this.readerLoading.set(false);
+    }
   }
 
-  closeDownloadModal() {
-    this._showDownloadModal.set(false);
-    this._selectedChapter.set(null);
-    this._downloadProgress.set(null);
+  closeReaderModal = () => {
+    this.showReaderModal.set(false);
+    this.readerChapter.set(null);
+    this.readerImages.set([]);
+  };
+
+  onPageChanged(event: { page: number; total: number }) {
+    const chapter = this.readerChapter();
+    const userId = this.auth.getUserId();
+    if (!chapter || !userId || !this.manga) return;
+
+    this.http.post('/api/progress/update', {
+      user_id: userId,
+      manga_id: this.manga.id,
+      chapter_id: chapter.id,
+      current_page: event.page,
+      total_pages: event.total
+    }).subscribe({ error: (e) => console.warn('Progress save failed:', e) });
   }
 
-  updateDownloadSetting(field: keyof DownloadSettings, value: string) {
-    const settings = this.downloadSettings;
-    this._downloadSettings.set({
-      ...settings,
-      [field]: value
+  // ── Library ─────────────────────────────────────────────
+  addToLibrary(): void {
+    if (!this.manga || !this.auth.isAuthenticated()) {
+      this.router.navigate(['/login']);
+      return;
+    }
+    const userId = this.auth.getUserId();
+    if (!userId) return;
+
+    this.addingToLibrary.set(true);
+    const mangaTitle = this.manga.attributes?.title?.['en'] || this.manga.attributes?.title?.['ja-ro'] || 'Unknown Title';
+
+    this.http.post<{ success: boolean; message: string }>('/api/progress/library/add', {
+      user_id: userId,
+      manga_id: this.manga.id,
+      title: mangaTitle,
+      status: 'PlanToRead'
+    }).subscribe({
+      next: (res) => {
+        if (res.success) {
+          this.inLibrary.set(true);
+          this.toastr.success(`Added "${mangaTitle}" to your library`, 'Success');
+        } else {
+          this.toastr.error('Failed to add to library', 'Error');
+        }
+        this.addingToLibrary.set(false);
+      },
+      error: () => {
+        this.toastr.error('Failed to add to library', 'Error');
+        this.addingToLibrary.set(false);
+      }
     });
   }
 
+  // ── Download ─────────────────────────────────────────────
+  openDownloadModal(chapter: Chapter) {
+    this.selectedChapter.set(chapter);
+    this.showDownloadModal.set(true);
+  }
+
+  closeDownloadModal() {
+    this.showDownloadModal.set(false);
+    this.selectedChapter.set(null);
+    this.downloadProgress.set(null);
+  }
+
+  updateDownloadSetting(field: keyof DownloadSettings, value: string) {
+    this.downloadSettings.set({ ...this.downloadSettings(), [field]: value });
+  }
+
   onCommonPathChange(selectedPath: string) {
-    this._selectedCommonPath.set(selectedPath);
-    if (selectedPath !== 'custom') {
-      this.updateDownloadSetting('savePath', selectedPath);
-    }
+    this.selectedCommonPath.set(selectedPath);
+    if (selectedPath !== 'custom') this.updateDownloadSetting('savePath', selectedPath);
   }
 
   async openDirectoryPicker() {
     try {
-      const showDirectoryPicker = (globalThis as any).showDirectoryPicker as (() => Promise<FileSystemDirectoryHandle>) | undefined;
-      if (showDirectoryPicker) {
-        const dirHandle = await showDirectoryPicker();
-        this.updateDownloadSetting('savePath', dirHandle.name);
-        this._selectedCommonPath.set('custom');
+      const picker = (globalThis as any).showDirectoryPicker as (() => Promise<FileSystemDirectoryHandle>) | undefined;
+      if (picker) {
+        const dir = await picker();
+        this.updateDownloadSetting('savePath', dir.name);
+        this.selectedCommonPath.set('custom');
       } else {
         this.promptForCustomPath();
       }
-    } catch (error: unknown) {
-      if ((error as { name?: string })?.name !== 'AbortError') {
-        console.error('Directory picker error:', error);
-        this.promptForCustomPath();
-      }
+    } catch (e: unknown) {
+      if ((e as { name?: string })?.name !== 'AbortError') this.promptForCustomPath();
     }
   }
 
   promptForCustomPath(): void {
-    const customPath = prompt('Enter custom download path:', this.downloadSettings.savePath);
-    if (customPath?.trim()) {
-      this.updateDownloadSetting('savePath', customPath.trim());
-      this._selectedCommonPath.set('custom');
-    }
+    const p = prompt('Enter custom download path:', this.downloadSettings().savePath);
+    if (p?.trim()) { this.updateDownloadSetting('savePath', p.trim()); this.selectedCommonPath.set('custom'); }
   }
 
   isValidPath(path: string): boolean {
-    return !!(path && path.trim().length > 0 && path !== 'custom');
+    return !!(path?.trim() && path !== 'custom');
   }
 
   async downloadChapter() {
-    const chapter = this.selectedChapter;
-    const settings = this.downloadSettings;
+    const chapter = this.selectedChapter();
+    const settings = this.downloadSettings();
     if (!chapter || !this.isValidPath(settings.savePath)) {
-      this._error.set('Please provide a valid save path');
+      this.error.set('Please provide a valid save path');
       return;
     }
-    this._downloading.set(true);
-    this._error.set('');
+    this.downloading.set(true);
+    this.error.set('');
     try {
       const chapterTitle = chapter.attributes.title || `Chapter_${chapter.attributes.chapter}`;
-      if (typeof this.apiService.downloadFiles !== 'function') {
-        this._error.set('Download not supported. Method missing on Apiservice.');
-        return;
-      }
       const response = await firstValueFrom(this.apiService.downloadFiles(
-        chapter.id,
-        settings.savePath,
-        settings.mangaTitle,
-        chapterTitle,
-        settings.quality
+        chapter.id, settings.savePath, settings.mangaTitle, chapterTitle, settings.quality
       ));
-      if (response?.success) {
-        this._downloadProgress.set(response as any);
+      if ((response as any)?.success) {
+        this.downloadProgress.set(response as any);
       } else {
-        this._error.set((response as any)?.error || 'Download failed');
+        this.error.set((response as any)?.error || 'Download failed');
       }
-    } catch (error) {
-      console.error('Failed to download chapter:', error);
+    } catch {
       this.toastr.error('Failed to download chapter', 'Error');
-      this._error.set('Failed to download chapter');
+      this.error.set('Failed to download chapter');
     } finally {
-      this._downloading.set(false);
+      this.downloading.set(false);
     }
   }
 
   getChapterTitle(chapter: Chapter): string {
     if (!chapter?.attributes) return '';
-    const chapterNumber = chapter.attributes.chapter;
-    const title = chapter.attributes.title;
-    return title ? `Chapter ${chapterNumber}: ${title}` : `Chapter ${chapterNumber}`;
+    return chapter.attributes.title
+      ? `Chapter ${chapter.attributes.chapter}: ${chapter.attributes.title}`
+      : `Chapter ${chapter.attributes.chapter}`;
   }
 
   formatFileSize(quality: 'high' | 'saver'): string {
@@ -326,58 +339,13 @@ closeReaderModal: any;
   }
 
   getPathPreview(): string {
-    const settings = this.downloadSettings;
-    const chapter = this.selectedChapter;
+    const settings = this.downloadSettings();
+    const chapter = this.selectedChapter();
     if (!settings?.savePath || !chapter) return '';
-    const chapterTitle = chapter.attributes.title || `Chapter_${chapter.attributes.chapter}`;
-    let sanitizedTitle = chapterTitle;
-    ["/", "\\", ":", "*", "?", '"', "<", ">", "|"]
-      .forEach(char => {
-        sanitizedTitle = sanitizedTitle.replaceAll(char, "");
-      });
-    return `${settings.savePath}/${settings.mangaTitle}/${sanitizedTitle}/`;
+    let title = chapter.attributes.title || `Chapter_${chapter.attributes.chapter}`;
+    ['/', '\\', ':', '*', '?', '"', '<', '>', '|'].forEach(c => { title = title.replaceAll(c, ''); });
+    return `${settings.savePath}/${settings.mangaTitle}/${title}/`;
   }
 
-  addToLibrary(): void {
-    if (!this.manga || !this.auth.isAuthenticated()) {
-      return;
-    }
-
-    const userId = this.auth.getUserId();
-    if (!userId) {
-      this._error.set('User not authenticated');
-      return;
-    }
-
-    this._addingToLibrary.set(true);
-    this._error.set('');
-
-    const mangaTitle = this.manga.attributes?.title?.['en'] || 
-                      this.manga.attributes?.title?.['jp'] || 
-                      'Unknown Title';
-
-    this.http.post<{success: boolean; message: string}>('/api/progress/library/add', {
-      user_id: userId,
-      manga_id: this.manga.id,
-      title: mangaTitle,
-      status: 'PlanToRead'
-    }).subscribe({
-      next: (response) => {
-        if (response.success) {
-          this._inLibrary.set(true);
-          this._addingToLibrary.set(false);
-          this.toastr.success(`Added "${mangaTitle}" to your library!`, 'Success');
-        } else {
-          this._error.set('Failed to add to library');
-          this._addingToLibrary.set(false);
-          this.toastr.error('Failed to add to library', 'Error');
-        }
-      },
-      error: (err) => {
-        this.toastr.error('Failed to add to library. Please try again.', 'Error');
-        this._error.set('Failed to add to library. Please try again.');
-        this._addingToLibrary.set(false);
-      }
-    });
-  }
+  chapterTracker(_: number, chapter: Chapter): string { return chapter.id; }
 }
