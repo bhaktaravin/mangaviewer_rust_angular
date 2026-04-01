@@ -31,6 +31,7 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { Apiservice } from '../apiservice';
 import { CommonModule } from '@angular/common';
 import { CoverImageService } from '../cover-image.service';
+import { DisclaimerComponent } from '../disclaimer/disclaimer.component';
 
 
 interface DownloadSettings {
@@ -58,7 +59,7 @@ declare global {
 @Component({
   selector: 'app-manga-detail',
   standalone: true,
-  imports: [FormsModule, MangaReaderComponent, CommonModule],
+  imports: [FormsModule, MangaReaderComponent, CommonModule, DisclaimerComponent],
   templateUrl: './manga-detail.html',
   styleUrl: './manga-detail.css'
 })
