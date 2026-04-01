@@ -17,7 +17,7 @@ COPY . .
 RUN cargo build --release --bin main
 
 # Use a minimal base image for the final stage
-FROM debian:bookworm-slim
+FROM debian:13.4-slim
 
 # Install CA certificates for HTTPS requests
 RUN apt-get update && apt-get install -y ca-certificates && rm -rf /var/lib/apt/lists/*
