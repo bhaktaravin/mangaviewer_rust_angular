@@ -89,8 +89,8 @@
                 >
                   📖 View Details & Download
                 </button>
-                <button class="btn btn-outline btn-small">
-                  ⭐ Add to Favorites
+                <button class="btn btn-outline btn-small" (click)="addToLibrary(manga)" [disabled]="addedToLibrary.has(manga.id)">
+                  {{ addedToLibrary.has(manga.id) ? '✓ In Library' : '⭐ Add to Library' }}
                 </button>
               </div>
             </div>

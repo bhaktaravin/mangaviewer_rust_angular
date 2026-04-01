@@ -1,6 +1,9 @@
 import { Component, signal, OnInit, Input } from '@angular/core';
+import { MangaReaderComponent } from '../manga-reader';
 import { Manga } from '../interfaces/manga';
 import { firstValueFrom } from 'rxjs';
+import { ToastrService } from 'ngx-toastr';
+import { AuthService } from '../auth.service';
 
 // Exported Chapter interface (single declaration)
 export interface Chapter {
@@ -26,6 +29,8 @@ export interface DownloadProgress {
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { Apiservice } from '../apiservice';
+import { CommonModule } from '@angular/common';
+import { CoverImageService } from '../cover-image.service';
 
 
 interface DownloadSettings {
@@ -53,9 +58,9 @@ declare global {
 @Component({
   selector: 'app-manga-detail',
   standalone: true,
-  imports: [FormsModule],
-  templateUrl: './manga-detail.component.html',
-  styleUrl: './manga-detail.component.css'
+  imports: [FormsModule, MangaReaderComponent, CommonModule],
+  templateUrl: './manga-detail.html',
+  styleUrl: './manga-detail.css'
 })
 export class MangaDetailComponent implements OnInit {
   @Input() manga: Manga | null = null;
@@ -63,8 +68,50 @@ export class MangaDetailComponent implements OnInit {
   chapters = signal<Chapter[]>([]);
   loading = signal(false);
   error = signal('');
+  coverUrl: string | null = null;
 
-  // Download functionality
+  // Library state
+  inLibrary = false;
+  addingToLibrary = false;
+
+  // Reader modal state
+  showReaderModal = signal<boolean>(false);
+  readerImages = signal<string[]>([]);
+  readerChapter = signal<Chapter | null>(null);
+  readerLoading = signal(false);
+
+  async openReaderModal(chapter: Chapter) {
+    this.readerChapter.set(chapter);
+    this.readerLoading.set(true);
+    this.readerImages.set([]);
+    this.showReaderModal.set(true);
+
+    try {
+      // Fetch real at-home server URLs for this chapter
+      const response = await firstValueFrom(this.apiService.getChapterDownloadInfo(chapter.id));
+      const data = response as any;
+      const baseUrl: string = data?.baseUrl ?? '';
+      const hash: string = data?.chapter?.hash ?? '';
+      const pages: string[] = data?.chapter?.data ?? [];
+
+      if (baseUrl && hash && pages.length) {
+        const imageUrls = pages.map((p: string) => `${baseUrl}/data/${hash}/${p}`);
+        this.readerImages.set(imageUrls);
+      } else {
+        this.error.set('Could not load chapter pages');
+      }
+    } catch {
+      this.error.set('Failed to fetch chapter pages');
+    } finally {
+      this.readerLoading.set(false);
+    }
+  }
+
+  closeReaderModal = () => {
+    this.showReaderModal.set(false);
+    this.readerChapter.set(null);
+    this.readerImages.set([]);
+  };
   showDownloadModal = signal(false);
   selectedChapter = signal<Chapter | null>(null);
   downloadSettings = signal<DownloadSettings>({
@@ -89,7 +136,10 @@ export class MangaDetailComponent implements OnInit {
   constructor(
     private readonly apiService: Apiservice,
     private readonly route: ActivatedRoute,
-    private readonly router: Router
+    private readonly router: Router,
+    private readonly coverService: CoverImageService,
+    private readonly authService: AuthService,
+    private readonly toastr: ToastrService
   ) {}
 
   ngOnInit() {
@@ -116,6 +166,30 @@ export class MangaDetailComponent implements OnInit {
     });
     // Set default path
     this.selectedCommonPath.set('/home/ravin/Downloads/manga');
+
+    // Load cover image
+    if (this.manga?.id) {
+      this.coverService.getCoverUrl(this.manga.id, '512').subscribe(url => {
+        this.coverUrl = url;
+      });
+    }
+  }
+
+  async addToLibrary() {
+    if (!this.manga || !this.authService.isAuthenticated()) {
+      this.router.navigate(['/login']);
+      return;
+    }
+    this.addingToLibrary = true;
+    try {
+      await firstValueFrom(this.apiService.addMangaToLibrary(this.manga));
+      this.inLibrary = true;
+      this.toastr.success('Added to your library', 'Success');
+    } catch {
+      this.toastr.error('Failed to add to library', 'Error');
+    } finally {
+      this.addingToLibrary = false;
+    }
   }
 
   private loadMangaById() {

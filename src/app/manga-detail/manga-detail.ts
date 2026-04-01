@@ -60,6 +60,18 @@ declare global {
   styleUrl: './manga-detail.css'
 })
 export class MangaDetailComponent implements OnInit {
+openReaderModal(_t32: Chapter) {
+throw new Error('Method not implemented.');
+}
+showReaderModal(): any {
+throw new Error('Method not implemented.');
+}
+readerChapter() {
+throw new Error('Method not implemented.');
+}
+readerImages() {
+throw new Error('Method not implemented.');
+}
   manga: Manga | null = null;
   private readonly _chapters = signal<Chapter[]>([]);
   private readonly _loading = signal(false);
@@ -86,6 +98,7 @@ export class MangaDetailComponent implements OnInit {
     { label: '⬇️ Temporary Downloads', path: '/tmp/manga_downloads' },
     { label: '✏️ Custom Location', path: 'custom' }
   ];
+closeReaderModal: any;
 
   constructor(
     private readonly apiService: Apiservice,

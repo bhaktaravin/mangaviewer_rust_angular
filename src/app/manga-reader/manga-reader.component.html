@@ -1,0 +1,43 @@
+<div class="reader-modal-overlay" *ngIf="show" (click)="close()">
+  <div class="reader-modal-content" (click)="$event.stopPropagation()">
+    <div class="reader-header">
+      <span class="reader-title">{{ chapter?.attributes?.title || 'Chapter ' + chapter?.attributes?.chapter }}</span>
+      <div class="reader-controls">
+        <button (click)="setMode('vertical')" [class.active]="mode() === 'vertical'" title="Vertical scroll">↕</button>
+        <button (click)="setMode('horizontal')" [class.active]="mode() === 'horizontal'" title="Horizontal scroll">↔</button>
+        <button (click)="setMode('single')" [class.active]="mode() === 'single'" title="Single page">□</button>
+        <button (click)="setMode('double')" [class.active]="mode() === 'double'" title="Double page">▭</button>
+      </div>
+      <button class="close-btn" (click)="close()">×</button>
+    </div>
+
+    <!-- Loading state -->
+    <div class="reader-loading" *ngIf="loading">
+      <div class="reader-spinner"></div>
+      <p>Loading pages...</p>
+    </div>
+
+    <!-- Paged modes (single / double) -->
+    <ng-container *ngIf="!loading && (mode() === 'single' || mode() === 'double')">
+      <div class="paged-view">
+        <button class="nav-btn nav-prev" (click)="prevPage()" [disabled]="!hasPrev">‹</button>
+        <div class="page-display" [class.double]="mode() === 'double'">
+          <img *ngIf="images[currentPage()]" [src]="images[currentPage()]" class="reader-image" [alt]="'Page ' + (currentPage() + 1)" loading="lazy" />
+          <img *ngIf="mode() === 'double' && images[currentPage() + 1]" [src]="images[currentPage() + 1]" class="reader-image" [alt]="'Page ' + (currentPage() + 2)" loading="lazy" />
+        </div>
+        <button class="nav-btn nav-next" (click)="nextPage()" [disabled]="!hasNext">›</button>
+      </div>
+      <div class="page-counter">{{ currentPage() + 1 }} / {{ images.length }}</div>
+    </ng-container>
+
+    <!-- Scroll modes (vertical / horizontal) -->
+    <div class="reader-pages" [ngClass]="mode()" *ngIf="!loading && (mode() === 'vertical' || mode() === 'horizontal')">
+      <ng-container *ngIf="mode() === 'vertical'">
+        <img *ngFor="let img of images; let i = index" [src]="img" class="reader-image" [alt]="'Page ' + (i + 1)" loading="lazy" />
+      </ng-container>
+      <div class="horizontal-scroll" *ngIf="mode() === 'horizontal'">
+        <img *ngFor="let img of images; let i = index" [src]="img" class="reader-image" [alt]="'Page ' + (i + 1)" loading="lazy" />
+      </div>
+    </div>
+  </div>
+</div>

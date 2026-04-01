@@ -242,6 +242,15 @@ impl MangaDexClient {
             return true;
         }
 
+        // Accept romanized titles (ja-ro, ko-ro, zh-ro, etc.) — very common for
+        // manga that haven't been officially translated yet
+        let romanized_keys = ["ja-ro", "ko-ro", "zh-ro", "zh-hk-ro"];
+        for key in &romanized_keys {
+            if manga.attributes.title.contains_key(*key) {
+                return true;
+            }
+        }
+
         // Check if manga has English description
         if manga.attributes.description.contains_key("en") {
             return true;

@@ -7,6 +7,8 @@ import { Apiservice, MangaSearchRequest } from '../apiservice';
 import { DisclaimerComponent } from '../disclaimer/disclaimer.component';
 import { CoverImageService } from '../cover-image.service';
 import { Manga } from '../interfaces/manga';
+import { AuthService } from '../auth.service';
+import { ToastrService } from 'ngx-toastr';
 
 @Component({
   selector: 'app-manga-search',
@@ -22,6 +24,9 @@ export class MangaSearchComponent implements OnInit {
   error = signal('');
   hasMore = signal(false);
   currentPage = signal(1);
+  addedToLibrary = new Set<string>();
+  private externalTotal = 0;
+  private readonly PAGE_SIZE = 100;
 
   // Demo manga data for search fallback
   private readonly demoManga: Manga[] = [
@@ -98,7 +103,9 @@ export class MangaSearchComponent implements OnInit {
     private readonly apiService: Apiservice, 
     private readonly router: Router,
     private readonly coverService: CoverImageService,
-    private readonly titleService: Title
+    private readonly titleService: Title,
+    private readonly authService: AuthService,
+    private readonly toastr: ToastrService
   ) {}
 
   ngOnInit() {
@@ -132,16 +139,18 @@ export class MangaSearchComponent implements OnInit {
       } else {
         // No local results, try external API
         console.log('No local results, searching external API...');
-        const externalResponse = await this.apiService.searchExternalManga(this.searchQuery().trim()).toPromise();
+        const externalResponse = await this.apiService.searchExternalManga(this.searchQuery().trim(), 0, this.PAGE_SIZE).toPromise();
         
         if (externalResponse?.data) {
+          const total: number = (externalResponse as any).total ?? externalResponse.data.length;
+          this.externalTotal = total;
           // Process MangaDx API response
           const mangaList: Manga[] = externalResponse.data.map((manga: any) => ({
             id: manga.id,
             type: 'manga',
             attributes: {
               title: {
-                en: manga.attributes?.title?.['en'] || manga.attributes?.title?.['jp'] || 'Unknown Title'
+                en: manga.attributes?.title?.['en'] || manga.attributes?.title?.['ja-ro'] || manga.attributes?.title?.['ko-ro'] || Object.values(manga.attributes?.title ?? {})[0] || 'Unknown Title'
               },
               description: {
                 en: manga.attributes?.description?.['en'] || ''
@@ -155,7 +164,7 @@ export class MangaSearchComponent implements OnInit {
             })) : []
           }));
           this.searchResults.set(mangaList);
-          this.hasMore.set(false);
+          this.hasMore.set(mangaList.length < total);
           if (mangaList.length === 0) {
             this.fallbackToDemoSearch();
           }
@@ -195,20 +204,30 @@ export class MangaSearchComponent implements OnInit {
     this.loading.set(true);
     
     try {
-      const nextPage = this.currentPage() + 1;
-      const searchParams: MangaSearchRequest = {
-        query: this.searchQuery().trim(),
-        page: nextPage,
-        limit: 20
-      };
+      const offset = this.searchResults().length;
+      const externalResponse = await this.apiService.searchExternalManga(
+        this.searchQuery().trim(), offset, this.PAGE_SIZE
+      ).toPromise();
 
-      const response = await this.apiService.searchManga(searchParams).toPromise();
-      
-      if (response) {
-        const currentResults = this.searchResults();
-        this.searchResults.set([...currentResults, ...(response.manga || [])]);
-        this.hasMore.set(false); // Backend doesn't implement pagination yet
-        this.currentPage.set(nextPage);
+      if (externalResponse?.data) {
+        const newManga: Manga[] = externalResponse.data.map((manga: any) => ({
+          id: manga.id,
+          type: 'manga',
+          attributes: {
+            title: {
+              en: manga.attributes?.title?.['en'] || manga.attributes?.title?.['ja-ro'] || manga.attributes?.title?.['ko-ro'] || Object.values(manga.attributes?.title ?? {})[0] || 'Unknown Title'
+            },
+            description: { en: manga.attributes?.description?.['en'] || '' },
+            status: manga.attributes?.status || '',
+            originalLanguage: manga.attributes?.originalLanguage || 'ja'
+          },
+          relationships: Array.isArray(manga.relationships) ? manga.relationships.map((rel: any) => ({
+            id: rel.id, type: rel.type
+          })) : []
+        }));
+        const updated = [...this.searchResults(), ...newManga];
+        this.searchResults.set(updated);
+        this.hasMore.set(updated.length < this.externalTotal);
       }
     } catch (error) {
       console.error('Load more error:', error);
@@ -224,6 +243,7 @@ export class MangaSearchComponent implements OnInit {
     this.error.set('');
     this.hasMore.set(false);
     this.currentPage.set(1);
+    this.externalTotal = 0;
   }
 
   onEnterKey(event: KeyboardEvent) {
@@ -238,6 +258,20 @@ export class MangaSearchComponent implements OnInit {
       url = coverUrl;
     });
     return url || 'https://via.placeholder.com/230x320/667eea/ffffff?text=Loading...';
+  }
+
+  async addToLibrary(manga: Manga) {
+    if (!this.authService.isAuthenticated()) {
+      this.router.navigate(['/login']);
+      return;
+    }
+    try {
+      await this.apiService.addMangaToLibrary(manga).toPromise();
+      this.addedToLibrary.add(manga.id);
+      this.toastr.success(`Added "${manga.attributes.title?.['en'] || 'manga'}" to library`, 'Success');
+    } catch {
+      this.toastr.error('Failed to add to library', 'Error');
+    }
   }
 
   showMangaDetails(manga: Manga) {

@@ -81,9 +81,8 @@
                 <span class="date">{{ chapter.attributes.publishAt | date:'shortDate' }}</span>
               </div>
             </div>
-            
             <div class="chapter-actions">
-              <button class="btn btn-outline btn-small">
+              <button class="btn btn-outline btn-small" (click)="openReaderModal(chapter)">
                 📖 Read Online
               </button>
               <button 
@@ -96,6 +95,16 @@
           </div>
         }
       </div>
+
+      <!-- Manga Reader Modal (single instance, outside chapter loop) -->
+      <app-manga-reader
+        *ngIf="showReaderModal()"
+        [chapter]="readerChapter()"
+        [images]="readerImages()"
+        [show]="showReaderModal()"
+        [loading]="readerLoading()"
+        [onClose]="closeReaderModal"
+      ></app-manga-reader>
     }
   </div>
 

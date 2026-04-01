@@ -132,10 +132,11 @@ export class Apiservice {
     });
   }
 
-  searchExternalManga(query: string): Observable<ApiResponse<Manga>> {
-    return this.http.get<ApiResponse<Manga>>(`${this.baseUrl}/api/manga?title=${encodeURIComponent(query)}`, {
-      headers: this.getAuthHeaders()
-    });
+  searchExternalManga(query: string, offset = 0, limit = 100): Observable<ApiResponse<Manga>> {
+    return this.http.get<ApiResponse<Manga>>(
+      `${this.baseUrl}/api/manga?title=${encodeURIComponent(query)}&limit=${limit}&offset=${offset}`,
+      { headers: this.getAuthHeaders() }
+    );
   }
 
   getMangaChapters(mangaId: string, chapter?: string, lang: string = 'en'): Observable<ApiResponse<Chapter>> {

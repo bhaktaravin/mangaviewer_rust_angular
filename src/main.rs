@@ -99,6 +99,8 @@ async fn update_embeddings_admin_handler(
 #[derive(Deserialize)]
 struct MangaQuery {
     title: Option<String>,
+    limit: Option<u32>,
+    offset: Option<u32>,
 }
 
 #[derive(Deserialize)]
@@ -125,9 +127,21 @@ struct DownloadFilesQuery {
 
 async fn manga_handler(Query(params): Query<MangaQuery>) -> impl IntoResponse {
     let mut url = "https://api.mangadex.org/manga".to_string();
+    let mut query_parts = vec![];
 
     if let Some(title) = params.title {
-        url.push_str(&format!("?title={}", urlencoding::encode(&title)));
+        query_parts.push(format!("title={}", urlencoding::encode(&title)));
+    }
+
+    let limit = params.limit.unwrap_or(100).min(100);
+    query_parts.push(format!("limit={}", limit));
+
+    if let Some(offset) = params.offset {
+        query_parts.push(format!("offset={}", offset));
+    }
+
+    if !query_parts.is_empty() {
+        url.push_str(&format!("?{}", query_parts.join("&")));
     }
 
     let client = reqwest::Client::new();
