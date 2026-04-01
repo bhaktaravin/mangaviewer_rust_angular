@@ -16,6 +16,13 @@ export class ThemeService {
     effect(() => {
       this.applyTheme(this.currentTheme());
     });
+
+    // Add theme-ready class after first paint so CSS transitions don't fire on load
+    if (typeof document !== 'undefined') {
+      requestAnimationFrame(() => {
+        document.body.classList.add('theme-ready');
+      });
+    }
   }
 
   private getInitialTheme(): Theme {
