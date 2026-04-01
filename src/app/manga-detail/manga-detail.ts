@@ -329,9 +329,10 @@ export class MangaDetailComponent implements OnInit {
 
   getChapterTitle(chapter: Chapter): string {
     if (!chapter?.attributes) return '';
-    return chapter.attributes.title
-      ? `Chapter ${chapter.attributes.chapter}: ${chapter.attributes.title}`
-      : `Chapter ${chapter.attributes.chapter}`;
+    const num = chapter.attributes.chapter;
+    const title = chapter.attributes.title;
+    const label = num === '0' ? 'Prologue' : `Chapter ${num}`;
+    return title ? `${label}: ${title}` : label;
   }
 
   formatFileSize(quality: 'high' | 'saver'): string {
