@@ -86,6 +86,10 @@ export class ProfileComponent implements OnInit {
     this.editError.set('');
   }
 
+  setEditField(field: 'username' | 'email' | 'password' | 'confirmPassword', value: string) {
+    this.editForm.set({ ...this.editForm(), [field]: value });
+  }
+
   async saveProfile() {
     const form = this.editForm();
 

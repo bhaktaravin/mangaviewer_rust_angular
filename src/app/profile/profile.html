@@ -94,28 +94,28 @@
                 <label for="edit-username">Username</label>
                 <input id="edit-username" type="text"
                   [ngModel]="editForm().username"
-                  (ngModelChange)="editForm.set({...editForm(), username: $event})"
+                  (ngModelChange)="setEditField('username', $event)"
                   class="form-input" />
               </div>
               <div class="form-group">
                 <label for="edit-email">Email</label>
                 <input id="edit-email" type="email"
                   [ngModel]="editForm().email"
-                  (ngModelChange)="editForm.set({...editForm(), email: $event})"
+                  (ngModelChange)="setEditField('email', $event)"
                   class="form-input" />
               </div>
               <div class="form-group">
                 <label for="edit-password">New Password <span class="optional">(leave blank to keep current)</span></label>
                 <input id="edit-password" type="password"
                   [ngModel]="editForm().password"
-                  (ngModelChange)="editForm.set({...editForm(), password: $event})"
+                  (ngModelChange)="setEditField('password', $event)"
                   class="form-input" placeholder="••••••••" />
               </div>
               <div class="form-group">
                 <label for="edit-confirm">Confirm Password</label>
                 <input id="edit-confirm" type="password"
                   [ngModel]="editForm().confirmPassword"
-                  (ngModelChange)="editForm.set({...editForm(), confirmPassword: $event})"
+                  (ngModelChange)="setEditField('confirmPassword', $event)"
                   class="form-input" placeholder="••••••••" />
               </div>
             </div>

@@ -2,7 +2,7 @@ import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
 import { Manga, ApiResponse } from './interfaces/manga';
-import { Chapter } from './manga-detail/manga-detail.component';
+import { Chapter } from './manga-detail/manga-detail';
 
 export interface LoginRequest {
   username: string;

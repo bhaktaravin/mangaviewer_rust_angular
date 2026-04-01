@@ -1,5 +1,5 @@
 import { Component, Input, signal, Output, EventEmitter } from '@angular/core';
-import { Chapter } from '../manga-detail/manga-detail.component';
+import { Chapter } from '../manga-detail/manga-detail';
 import { CommonModule } from '@angular/common';
 @Component({
   selector: 'app-manga-reader',
