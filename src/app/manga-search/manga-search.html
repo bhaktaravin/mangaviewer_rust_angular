@@ -1,7 +1,7 @@
 <div class="manga-search-container">
   <div class="search-header">
     <h2>🔍 Search Manga</h2>
-    <p>Discover your next favorite manga with AI-powered search</p>
+    <p>Discover your next favourite manga</p>
   </div>
 
   <div class="search-section">
@@ -11,86 +11,64 @@
         [ngModel]="searchQuery()"
         (ngModelChange)="searchQuery.set($event)"
         (keydown)="onEnterKey($event)"
-        placeholder="Search for manga titles, authors, or genres..."
+        placeholder="Search titles, authors, genres..."
         class="search-input"
         [disabled]="loading()"
+        autofocus
       />
       <div class="search-buttons">
-        <button
-          class="btn btn-primary"
-          (click)="onSearch()"
-          [disabled]="loading() || !searchQuery().trim()"
-        >
+        <button class="btn btn-primary" (click)="onSearch()" [disabled]="loading() || !searchQuery().trim()">
           @if (loading()) {
-            <span class="spinner"></span>
-            Searching...
+            <span class="spinner"></span> Searching...
           } @else {
             🔍 Search
           }
         </button>
         @if (searchQuery() || searchResults().length > 0) {
-          <button
-            class="btn btn-secondary"
-            (click)="clearSearch()"
-            [disabled]="loading()"
-          >
-            Clear
-          </button>
+          <button class="btn btn-secondary" (click)="clearSearch()" [disabled]="loading()">Clear</button>
         }
       </div>
     </div>
 
     @if (error()) {
-      <div class="error-message">
-        <span class="error-icon">⚠️</span>
-        {{ error() }}
-      </div>
+      <div class="error-message">⚠️ {{ error() }}</div>
     }
   </div>
 
   @if (searchResults().length > 0) {
     <div class="results-section">
       <div class="results-header">
-        <h3>Search Results</h3>
-        <span class="results-count">{{ searchResults().length }} results found</span>
+        <h3>Results</h3>
+        <span class="results-count">{{ searchResults().length }}{{ hasMore() ? '+' : '' }} found</span>
       </div>
 
       <div class="manga-grid">
-        @for (manga of searchResults(); track $index) {
-          <div class="manga-card">
+        @for (manga of searchResults(); track manga.id) {
+          <div class="manga-card" (click)="showMangaDetails(manga)">
             <div class="manga-image">
-              <img 
-                [src]="getCoverUrl(manga.id)" 
-                [alt]="manga.attributes.title?.['en'] || 'Manga cover'"
+              <img
+                [src]="getCoverUrl(manga.id)"
+                [alt]="manga.attributes.title['en'] || 'Cover'"
                 loading="lazy"
-                (error)="$event.target.src='https://via.placeholder.com/230x320/667eea/ffffff?text=No+Cover'"
+                (error)="$event.target.src='https://via.placeholder.com/230x320/1e1e2e/667eea?text=No+Cover'"
               />
             </div>
-            
             <div class="manga-info">
-              <h4 class="manga-title">{{ manga.attributes.title?.['en'] || 'Unknown Title' }}</h4>
-              
-              <p class="manga-author">
-                <span class="label">Author:</span>
-                Unknown
-              </p>
-              <p class="manga-genre">
-                <span class="label">Genre:</span>
-                Unknown
-              </p>
-              <p class="manga-description">
-                {{ (manga.attributes.description?.['en'] && manga.attributes.description['en'].length > 100) ? (manga.attributes.description['en'] | slice:0:100) + '...' : manga.attributes.description?.['en'] || '' }}
-              </p>
-              
+              <h4 class="manga-title">{{ manga.attributes.title['en'] || 'Unknown Title' }}</h4>
+              <span class="manga-status" [class]="manga.attributes.status">{{ manga.attributes.status }}</span>
+              @if (manga.attributes.description['en']) {
+                <p class="manga-description">{{ manga.attributes.description['en'] }}</p>
+              }
               <div class="manga-actions">
-                <button 
-                  class="btn btn-primary btn-small"
-                  (click)="showMangaDetails(manga)"
-                >
-                  📖 View Details & Download
+                <button class="btn btn-primary btn-small" (click)="showMangaDetails(manga); $event.stopPropagation()">
+                  📖 View
                 </button>
-                <button class="btn btn-outline btn-small" (click)="addToLibrary(manga)" [disabled]="addedToLibrary.has(manga.id)">
-                  {{ addedToLibrary.has(manga.id) ? '✓ In Library' : '⭐ Add to Library' }}
+                <button
+                  class="btn btn-small"
+                  [class]="addedToLibrary.has(manga.id) ? 'btn-outline in-library' : 'btn-outline'"
+                  (click)="addToLibrary(manga); $event.stopPropagation()"
+                  [disabled]="addedToLibrary.has(manga.id)">
+                  {{ addedToLibrary.has(manga.id) ? '✓ Saved' : '+ Library' }}
                 </button>
               </div>
             </div>
@@ -100,17 +78,9 @@
 
       @if (hasMore()) {
         <div class="load-more-section">
-          <button
-            class="btn btn-secondary btn-large"
-            (click)="loadMore()"
-            [disabled]="loading()"
-          >
-            @if (loading()) {
-              <span class="spinner"></span>
-              Loading more...
-            } @else {
-              Load More Results
-            }
+          <button class="btn btn-secondary btn-large" (click)="loadMore()" [disabled]="loading()">
+            @if (loading()) { <span class="spinner"></span> Loading... }
+            @else { Load More }
           </button>
         </div>
       }
@@ -129,26 +99,13 @@
     <div class="search-suggestions">
       <h3>💡 Search Tips</h3>
       <div class="tips-grid">
-        <div class="tip-card">
-          <span class="tip-icon">📝</span>
-          <p>Try searching by manga title</p>
-        </div>
-        <div class="tip-card">
-          <span class="tip-icon">👤</span>
-          <p>Search by author name</p>
-        </div>
-        <div class="tip-card">
-          <span class="tip-icon">🏷️</span>
-          <p>Browse by genre</p>
-        </div>
-        <div class="tip-card">
-          <span class="tip-icon">🤖</span>
-          <p>Use AI-powered recommendations</p>
-        </div>
+        <div class="tip-card"><span class="tip-icon">📝</span><p>Search by title</p></div>
+        <div class="tip-card"><span class="tip-icon">👤</span><p>Search by author</p></div>
+        <div class="tip-card"><span class="tip-icon">🏷️</span><p>Browse by genre</p></div>
+        <div class="tip-card"><span class="tip-icon">🌏</span><p>Find any language</p></div>
       </div>
     </div>
   }
-  
-  <!-- Disclaimer for manga content attribution -->
+
   <app-disclaimer></app-disclaimer>
 </div>
