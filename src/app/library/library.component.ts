@@ -2,7 +2,8 @@ import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { HttpClient } from '@angular/common/http';
 import { RouterModule, Router } from '@angular/router';
-import { Observable } from 'rxjs';
+import { Observable, forkJoin, of } from 'rxjs';
+import { catchError, map } from 'rxjs/operators';
 import { ToastrService } from 'ngx-toastr';
 import { AuthService } from '../auth.service';
 import { CoverImageService } from '../cover-image.service';
@@ -60,7 +61,8 @@ export class LibraryComponent implements OnInit {
   stats: ReadingStats | null = null;
   loading = false;
   error: string | null = null;
-  
+  newChapterAlerts: { mangaId: string; title: string; latestChapter: string }[] = [];
+
   // Filter state
   selectedStatus: string = 'All';
   searchQuery: string = '';
@@ -108,11 +110,10 @@ export class LibraryComponent implements OnInit {
         next: (response) => {
           if (response.success) {
             this.library = response.library;
-            
-            // Prefetch cover images for all manga in library
             const mangaIds = this.library.map(entry => entry.manga_id);
             this.coverService.prefetchCovers(mangaIds);
             this.filterLibrary();
+            this.checkNewChapters();
           } else {
             this.error = 'Failed to load library';
           }
@@ -141,6 +142,45 @@ export class LibraryComponent implements OnInit {
           this.toastr.error('Failed to load reading statistics', 'Error');
         }
       });
+  }
+
+  private checkNewChapters(): void {
+    // Only check manga currently being read
+    const reading = this.library.filter(e => e.status === 'Reading');
+    if (!reading.length) return;
+
+    const storageKey = 'manga_last_chapters';
+    const stored: Record<string, string> = JSON.parse(localStorage.getItem(storageKey) || '{}');
+
+    const checks = reading.map(entry =>
+      this.http.get<any>(
+        `https://api.mangadex.org/manga/${entry.manga_id}/feed?translatedLanguage[]=en&limit=1&order[chapter]=desc`
+      ).pipe(
+        map(res => {
+          const latest = res?.data?.[0]?.attributes?.chapter ?? null;
+          if (!latest) return null;
+          const prev = stored[entry.manga_id];
+          if (prev && prev !== latest) {
+            return { mangaId: entry.manga_id, title: entry.manga_title, latestChapter: latest };
+          }
+          // Store current latest so next visit can compare
+          stored[entry.manga_id] = latest;
+          return null;
+        }),
+        catchError(() => of(null))
+      )
+    );
+
+    forkJoin(checks).subscribe(results => {
+      this.newChapterAlerts = results.filter((r): r is { mangaId: string; title: string; latestChapter: string } => r !== null);
+      // Update stored values for newly detected updates
+      this.newChapterAlerts.forEach(a => { stored[a.mangaId] = a.latestChapter; });
+      localStorage.setItem(storageKey, JSON.stringify(stored));
+    });
+  }
+
+  dismissAlert(mangaId: string): void {
+    this.newChapterAlerts = this.newChapterAlerts.filter(a => a.mangaId !== mangaId);
   }
 
   filterLibrary(): void {

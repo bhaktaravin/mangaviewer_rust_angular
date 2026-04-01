@@ -3,12 +3,31 @@
     <div class="reader-header">
       <span class="reader-title">{{ chapter?.attributes?.title || 'Chapter ' + chapter?.attributes?.chapter }}</span>
       <div class="reader-controls">
-        <button (click)="setMode('vertical')" [class.active]="mode() === 'vertical'" title="Vertical scroll">↕</button>
-        <button (click)="setMode('horizontal')" [class.active]="mode() === 'horizontal'" title="Horizontal scroll">↔</button>
-        <button (click)="setMode('single')" [class.active]="mode() === 'single'" title="Single page">□</button>
-        <button (click)="setMode('double')" [class.active]="mode() === 'double'" title="Double page">▭</button>
+        <button (click)="setMode('vertical')" [class.active]="mode() === 'vertical'" title="Vertical (1)">↕</button>
+        <button (click)="setMode('horizontal')" [class.active]="mode() === 'horizontal'" title="Horizontal (2)">↔</button>
+        <button (click)="setMode('single')" [class.active]="mode() === 'single'" title="Single page (3)">□</button>
+        <button (click)="setMode('double')" [class.active]="mode() === 'double'" title="Double page (4)">▭</button>
+        <button (click)="showShortcuts.set(!showShortcuts())" title="Keyboard shortcuts (?)">⌨</button>
       </div>
-      <button class="close-btn" (click)="close()">×</button>
+      <button class="close-btn" (click)="close()" title="Close (Esc)">×</button>
+    </div>
+
+    <!-- Keyboard shortcuts overlay -->
+    <div class="shortcuts-overlay" *ngIf="showShortcuts()" (click)="showShortcuts.set(false)">
+      <div class="shortcuts-panel" (click)="$event.stopPropagation()">
+        <h3>Keyboard Shortcuts</h3>
+        <div class="shortcut-list">
+          <div class="shortcut-row"><kbd>→</kbd> / <kbd>↓</kbd><span>Next page</span></div>
+          <div class="shortcut-row"><kbd>←</kbd> / <kbd>↑</kbd><span>Previous page</span></div>
+          <div class="shortcut-row"><kbd>Esc</kbd><span>Close reader</span></div>
+          <div class="shortcut-row"><kbd>1</kbd><span>Vertical scroll</span></div>
+          <div class="shortcut-row"><kbd>2</kbd><span>Horizontal scroll</span></div>
+          <div class="shortcut-row"><kbd>3</kbd><span>Single page</span></div>
+          <div class="shortcut-row"><kbd>4</kbd><span>Double page</span></div>
+          <div class="shortcut-row"><kbd>?</kbd><span>Toggle this panel</span></div>
+        </div>
+        <button class="shortcuts-close" (click)="showShortcuts.set(false)">Got it</button>
+      </div>
     </div>
 
     <!-- Loading state -->

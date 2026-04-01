@@ -32,7 +32,7 @@ mod search;
 mod validation;
 
 use ai_service::AIService;
-use auth_mongodb::{login_handler, logout_handler, register_handler, AuthService};
+use auth_mongodb::{login_handler, logout_handler, register_handler, profile_handler, update_profile_handler, AuthService};
 use cache::CacheService;
 use handlers::{
     add_to_library_handler, advanced_search_handler, autocomplete_handler,
@@ -545,6 +545,7 @@ async fn main() {
         .route("/api/auth/login", post(login_handler))
         .route("/api/auth/register", post(register_handler))
         .route("/api/auth/logout", post(logout_handler))
+        .route("/api/user/profile", get(profile_handler).put(update_profile_handler))
         .with_state(auth_service);
 
     let manga_routes = Router::new()

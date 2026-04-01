@@ -192,3 +192,69 @@
   border-radius: 2px;
   display: block;
 }
+
+/* Keyboard shortcuts overlay */
+.shortcuts-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(0,0,0,0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10;
+}
+
+.shortcuts-panel {
+  background: #1e1e2e;
+  border: 1px solid #333;
+  border-radius: 12px;
+  padding: 1.5rem;
+  min-width: 280px;
+}
+
+.shortcuts-panel h3 {
+  margin: 0 0 1rem;
+  color: #fff;
+  font-size: 1rem;
+  text-align: center;
+}
+
+.shortcut-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.shortcut-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  color: #ccc;
+  font-size: 0.85rem;
+}
+
+.shortcut-row span { margin-left: auto; }
+
+kbd {
+  background: #333;
+  border: 1px solid #555;
+  border-radius: 4px;
+  padding: 0.15rem 0.4rem;
+  font-size: 0.8rem;
+  color: #fff;
+  font-family: monospace;
+}
+
+.shortcuts-close {
+  width: 100%;
+  padding: 0.5rem;
+  background: #3b82f6;
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.9rem;
+}
+
+.shortcuts-close:hover { background: #2563eb; }

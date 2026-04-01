@@ -81,6 +81,9 @@ pub struct RegisterRequest {
 
 #[derive(Debug, Deserialize)]
 pub struct UpdateProfileRequest {
+    pub username: Option<String>,
+    pub email: Option<String>,
+    pub password: Option<String>,
     pub display_name: Option<String>,
     pub bio: Option<String>,
     pub avatar_url: Option<String>,
@@ -539,6 +542,18 @@ impl AuthService {
             "updated_at": chrono::Utc::now().to_rfc3339()
         };
 
+        if let Some(username) = req.username {
+            update_doc.insert("username", username);
+        }
+        if let Some(email) = req.email {
+            update_doc.insert("email", email);
+        }
+        if let Some(password) = req.password {
+            if !password.is_empty() {
+                let hash = hash(&password, DEFAULT_COST)?;
+                update_doc.insert("password_hash", hash);
+            }
+        }
         if let Some(display_name) = req.display_name {
             update_doc.insert("profile.display_name", display_name);
         }

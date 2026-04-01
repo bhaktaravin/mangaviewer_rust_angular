@@ -1,6 +1,7 @@
-import { Component, Input, signal, Output, EventEmitter } from '@angular/core';
+import { Component, Input, signal, Output, EventEmitter, HostListener } from '@angular/core';
 import { Chapter } from '../manga-detail/manga-detail';
 import { CommonModule } from '@angular/common';
+
 @Component({
   selector: 'app-manga-reader',
   standalone: true,
@@ -18,6 +19,32 @@ export class MangaReaderComponent {
 
   mode = signal<'vertical' | 'horizontal' | 'single' | 'double'>('vertical');
   currentPage = signal(0);
+  showShortcuts = signal(false);
+
+  @HostListener('document:keydown', ['$event'])
+  onKeyDown(e: KeyboardEvent) {
+    if (!this.show) return;
+    switch (e.key) {
+      case 'ArrowRight':
+      case 'ArrowDown':
+        e.preventDefault();
+        this.nextPage();
+        break;
+      case 'ArrowLeft':
+      case 'ArrowUp':
+        e.preventDefault();
+        this.prevPage();
+        break;
+      case 'Escape':
+        this.close();
+        break;
+      case '1': this.setMode('vertical'); break;
+      case '2': this.setMode('horizontal'); break;
+      case '3': this.setMode('single'); break;
+      case '4': this.setMode('double'); break;
+      case '?': this.showShortcuts.set(!this.showShortcuts()); break;
+    }
+  }
 
   setMode(newMode: 'vertical' | 'horizontal' | 'single' | 'double') {
     this.mode.set(newMode);

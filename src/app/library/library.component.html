@@ -40,6 +40,19 @@
     </div>
   </div>
 
+  <!-- New Chapter Alerts -->
+  <div class="new-chapters-banner" *ngIf="newChapterAlerts.length > 0">
+    <div class="banner-header">🔔 New chapters available</div>
+    <div class="alert-list">
+      <div class="chapter-alert" *ngFor="let alert of newChapterAlerts">
+        <span class="alert-title">{{ alert.title }}</span>
+        <span class="alert-chapter">Chapter {{ alert.latestChapter }} is out!</span>
+        <button class="alert-read" (click)="viewManga(alert.mangaId)">Read →</button>
+        <button class="alert-dismiss" (click)="dismissAlert(alert.mangaId)">✕</button>
+      </div>
+    </div>
+  </div>
+
   <!-- Filters -->
   <div class="filters-section">
     <div class="status-filters">
