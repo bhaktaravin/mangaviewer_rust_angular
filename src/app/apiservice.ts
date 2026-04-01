@@ -134,7 +134,7 @@ export class Apiservice {
 
   searchExternalManga(query: string, offset = 0, limit = 100): Observable<ApiResponse<Manga>> {
     return this.http.get<ApiResponse<Manga>>(
-      `${this.baseUrl}/api/manga?title=${encodeURIComponent(query)}&limit=${limit}&offset=${offset}`,
+      `${this.baseUrl}/api/manga?title=${encodeURIComponent(query)}&limit=${limit}&offset=${offset}&includes[]=cover_art`,
       { headers: this.getAuthHeaders() }
     );
   }

@@ -1,11 +1,10 @@
-import { Component, signal, OnInit, ChangeDetectorRef } from '@angular/core';
+import { Component, signal, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { Title } from '@angular/platform-browser';
-import { Apiservice, MangaSearchRequest } from '../apiservice';
+import { Apiservice } from '../apiservice';
 import { DisclaimerComponent } from '../disclaimer/disclaimer.component';
-import { CoverImageService } from '../cover-image.service';
 import { Manga } from '../interfaces/manga';
 import { AuthService } from '../auth.service';
 import { ToastrService } from 'ngx-toastr';
@@ -103,11 +102,9 @@ export class MangaSearchComponent implements OnInit {
   constructor(
     private readonly apiService: Apiservice, 
     private readonly router: Router,
-    private readonly coverService: CoverImageService,
     private readonly titleService: Title,
     private readonly authService: AuthService,
-    private readonly toastr: ToastrService,
-    private readonly cdr: ChangeDetectorRef
+    private readonly toastr: ToastrService
   ) {}
 
   ngOnInit() {
@@ -123,65 +120,61 @@ export class MangaSearchComponent implements OnInit {
     this.loading.set(true);
     this.error.set('');
     this.currentPage.set(1);
+    this.coverUrls.clear();
 
     try {
-      // First try to search local database
-      const searchParams: MangaSearchRequest = {
-        query: this.searchQuery().trim(),
-        page: 1,
-        limit: 20
-      };
+      const externalResponse = await this.apiService.searchExternalManga(
+        this.searchQuery().trim(), 0, this.PAGE_SIZE
+      ).toPromise();
 
-      const localResponse = await this.apiService.searchManga(searchParams).toPromise();
-      
-      if (localResponse?.manga?.length) {
-        this.searchResults.set(localResponse.manga ?? []);
-        this.hasMore.set(false);
-        this.prefetchCovers(localResponse.manga ?? []);
+      if (externalResponse?.data?.length) {
+        const total: number = (externalResponse as any).total ?? externalResponse.data.length;
+        this.externalTotal = total;
+        const mangaList = this.mapMangaResponse(externalResponse.data);
+        this.searchResults.set(mangaList);
+        this.hasMore.set(mangaList.length < total);
       } else {
-        // No local results, try external API
-        console.log('No local results, searching external API...');
-        const externalResponse = await this.apiService.searchExternalManga(this.searchQuery().trim(), 0, this.PAGE_SIZE).toPromise();
-        
-        if (externalResponse?.data) {
-          const total: number = (externalResponse as any).total ?? externalResponse.data.length;
-          this.externalTotal = total;
-          // Process MangaDx API response
-          const mangaList: Manga[] = externalResponse.data.map((manga: any) => ({
-            id: manga.id,
-            type: 'manga',
-            attributes: {
-              title: {
-                en: manga.attributes?.title?.['en'] || manga.attributes?.title?.['ja-ro'] || manga.attributes?.title?.['ko-ro'] || Object.values(manga.attributes?.title ?? {})[0] || 'Unknown Title'
-              },
-              description: {
-                en: manga.attributes?.description?.['en'] || ''
-              },
-              status: manga.attributes?.status || '',
-              originalLanguage: manga.attributes?.originalLanguage || 'ja'
-            },
-            relationships: Array.isArray(manga.relationships) ? manga.relationships.map((rel: any) => ({
-              id: rel.id,
-              type: rel.type
-            })) : []
-          }));
-          this.searchResults.set(mangaList);
-          this.hasMore.set(mangaList.length < total);
-          this.prefetchCovers(mangaList);
-          if (mangaList.length === 0) {
-            this.fallbackToDemoSearch();
-          }
-        } else {
-          this.error.set('No results found from external source');
-        }
+        this.searchResults.set([]);
+        this.error.set('No results found');
       }
     } catch (error: unknown) {
       console.error('Search error:', error);
-      console.log('API unavailable, falling back to demo data...');
       this.fallbackToDemoSearch();
     } finally {
       this.loading.set(false);
     }
+  }
+
+  private mapMangaResponse(data: any[]): Manga[] {
+    return data.map((manga: any) => {
+      // Extract cover filename from inline relationships
+      const coverRel = manga.relationships?.find((r: any) => r.type === 'cover_art');
+      const fileName = coverRel?.attributes?.fileName;
+      if (fileName) {
+        const url = `https://uploads.mangadex.org/covers/${manga.id}/${fileName}.256.jpg`;
+        this.coverUrls.set(manga.id, url);
+      }
+
+      return {
+        id: manga.id,
+        type: 'manga',
+        attributes: {
+          title: {
+            en: manga.attributes?.title?.['en']
+              || manga.attributes?.title?.['ja-ro']
+              || manga.attributes?.title?.['ko-ro']
+              || (Object.values(manga.attributes?.title ?? {}) as string[])[0]
+              || 'Unknown Title'
+          },
+          description: { en: manga.attributes?.description?.['en'] || '' },
+          status: manga.attributes?.status || '',
+          originalLanguage: manga.attributes?.originalLanguage || 'ja'
+        },
+        relationships: Array.isArray(manga.relationships)
+          ? manga.relationships.map((rel: any) => ({ id: rel.id, type: rel.type }))
+          : []
+      };
+    });
   }
 
   private fallbackToDemoSearch() {
@@ -213,25 +206,10 @@ export class MangaSearchComponent implements OnInit {
       ).toPromise();
 
       if (externalResponse?.data) {
-        const newManga: Manga[] = externalResponse.data.map((manga: any) => ({
-          id: manga.id,
-          type: 'manga',
-          attributes: {
-            title: {
-              en: manga.attributes?.title?.['en'] || manga.attributes?.title?.['ja-ro'] || manga.attributes?.title?.['ko-ro'] || Object.values(manga.attributes?.title ?? {})[0] || 'Unknown Title'
-            },
-            description: { en: manga.attributes?.description?.['en'] || '' },
-            status: manga.attributes?.status || '',
-            originalLanguage: manga.attributes?.originalLanguage || 'ja'
-          },
-          relationships: Array.isArray(manga.relationships) ? manga.relationships.map((rel: any) => ({
-            id: rel.id, type: rel.type
-          })) : []
-        }));
+        const newManga = this.mapMangaResponse(externalResponse.data);
         const updated = [...this.searchResults(), ...newManga];
         this.searchResults.set(updated);
         this.hasMore.set(updated.length < this.externalTotal);
-        this.prefetchCovers(newManga);
       }
     } catch (error) {
       console.error('Load more error:', error);
@@ -258,18 +236,7 @@ export class MangaSearchComponent implements OnInit {
   }
 
   getCoverUrl(mangaId: string): string {
-    return this.coverUrls.get(mangaId) ?? 'https://via.placeholder.com/230x320/667eea/ffffff?text=Loading...';
-  }
-
-  private prefetchCovers(manga: Manga[]) {
-    manga.forEach(m => {
-      if (!this.coverUrls.has(m.id)) {
-        this.coverService.getCoverUrl(m.id, '256').subscribe(url => {
-          this.coverUrls.set(m.id, url);
-          this.cdr.markForCheck();
-        });
-      }
-    });
+    return this.coverUrls.get(mangaId) ?? 'https://via.placeholder.com/230x320/667eea/ffffff?text=No+Cover';
   }
 
   async addToLibrary(manga: Manga) {
