@@ -1,4 +1,4 @@
-import { Component, signal, OnInit } from '@angular/core';
+import { Component, signal, OnInit, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
@@ -25,6 +25,7 @@ export class MangaSearchComponent implements OnInit {
   hasMore = signal(false);
   currentPage = signal(1);
   addedToLibrary = new Set<string>();
+  coverUrls = new Map<string, string>();
   private externalTotal = 0;
   private readonly PAGE_SIZE = 100;
 
@@ -105,7 +106,8 @@ export class MangaSearchComponent implements OnInit {
     private readonly coverService: CoverImageService,
     private readonly titleService: Title,
     private readonly authService: AuthService,
-    private readonly toastr: ToastrService
+    private readonly toastr: ToastrService,
+    private readonly cdr: ChangeDetectorRef
   ) {}
 
   ngOnInit() {
@@ -133,9 +135,9 @@ export class MangaSearchComponent implements OnInit {
       const localResponse = await this.apiService.searchManga(searchParams).toPromise();
       
       if (localResponse?.manga?.length) {
-        // Found results in local database
         this.searchResults.set(localResponse.manga ?? []);
         this.hasMore.set(false);
+        this.prefetchCovers(localResponse.manga ?? []);
       } else {
         // No local results, try external API
         console.log('No local results, searching external API...');
@@ -165,6 +167,7 @@ export class MangaSearchComponent implements OnInit {
           }));
           this.searchResults.set(mangaList);
           this.hasMore.set(mangaList.length < total);
+          this.prefetchCovers(mangaList);
           if (mangaList.length === 0) {
             this.fallbackToDemoSearch();
           }
@@ -228,6 +231,7 @@ export class MangaSearchComponent implements OnInit {
         const updated = [...this.searchResults(), ...newManga];
         this.searchResults.set(updated);
         this.hasMore.set(updated.length < this.externalTotal);
+        this.prefetchCovers(newManga);
       }
     } catch (error) {
       console.error('Load more error:', error);
@@ -244,6 +248,7 @@ export class MangaSearchComponent implements OnInit {
     this.hasMore.set(false);
     this.currentPage.set(1);
     this.externalTotal = 0;
+    this.coverUrls.clear();
   }
 
   onEnterKey(event: KeyboardEvent) {
@@ -253,11 +258,18 @@ export class MangaSearchComponent implements OnInit {
   }
 
   getCoverUrl(mangaId: string): string {
-    let url = '';
-    this.coverService.getCoverUrl(mangaId, '256').subscribe(coverUrl => {
-      url = coverUrl;
+    return this.coverUrls.get(mangaId) ?? 'https://via.placeholder.com/230x320/667eea/ffffff?text=Loading...';
+  }
+
+  private prefetchCovers(manga: Manga[]) {
+    manga.forEach(m => {
+      if (!this.coverUrls.has(m.id)) {
+        this.coverService.getCoverUrl(m.id, '256').subscribe(url => {
+          this.coverUrls.set(m.id, url);
+          this.cdr.markForCheck();
+        });
+      }
     });
-    return url || 'https://via.placeholder.com/230x320/667eea/ffffff?text=Loading...';
   }
 
   async addToLibrary(manga: Manga) {
