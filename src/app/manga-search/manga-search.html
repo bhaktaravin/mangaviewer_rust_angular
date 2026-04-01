@@ -52,25 +52,31 @@
                 loading="lazy"
                 (error)="$event.target.src='https://via.placeholder.com/230x320/1e1e2e/667eea?text=No+Cover'"
               />
+              <div class="manga-hover-overlay">
+                <div class="hover-content">
+                  <h4 class="hover-title">{{ manga.attributes.title['en'] || 'Unknown Title' }}</h4>
+                  <span class="hover-status" [class]="manga.attributes.status">{{ manga.attributes.status }}</span>
+                  @if (manga.attributes.description['en']) {
+                    <p class="hover-description">{{ manga.attributes.description['en'] }}</p>
+                  }
+                  <div class="hover-actions">
+                    <button class="btn btn-primary btn-small" (click)="showMangaDetails(manga); $event.stopPropagation()">
+                      📖 View
+                    </button>
+                    <button
+                      class="btn btn-small"
+                      [class]="addedToLibrary.has(manga.id) ? 'btn-outline in-library' : 'btn-outline'"
+                      (click)="addToLibrary(manga); $event.stopPropagation()"
+                      [disabled]="addedToLibrary.has(manga.id)">
+                      {{ addedToLibrary.has(manga.id) ? '✓ Saved' : '+ Library' }}
+                    </button>
+                  </div>
+                </div>
+              </div>
             </div>
             <div class="manga-info">
               <h4 class="manga-title">{{ manga.attributes.title['en'] || 'Unknown Title' }}</h4>
               <span class="manga-status" [class]="manga.attributes.status">{{ manga.attributes.status }}</span>
-              @if (manga.attributes.description['en']) {
-                <p class="manga-description">{{ manga.attributes.description['en'] }}</p>
-              }
-              <div class="manga-actions">
-                <button class="btn btn-primary btn-small" (click)="showMangaDetails(manga); $event.stopPropagation()">
-                  📖 View
-                </button>
-                <button
-                  class="btn btn-small"
-                  [class]="addedToLibrary.has(manga.id) ? 'btn-outline in-library' : 'btn-outline'"
-                  (click)="addToLibrary(manga); $event.stopPropagation()"
-                  [disabled]="addedToLibrary.has(manga.id)">
-                  {{ addedToLibrary.has(manga.id) ? '✓ Saved' : '+ Library' }}
-                </button>
-              </div>
             </div>
           </div>
         }
