@@ -104,6 +104,7 @@
         [show]="showReaderModal()"
         [loading]="readerLoading()"
         [onClose]="closeReaderModal"
+        (pageChanged)="onPageChanged($event)"
       ></app-manga-reader>
     }
   </div>

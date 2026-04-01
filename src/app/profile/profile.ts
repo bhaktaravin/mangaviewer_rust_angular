@@ -1,6 +1,7 @@
-import { Component, computed, OnInit } from '@angular/core';
+import { Component, computed, OnInit, signal } from '@angular/core';
 import { Router, RouterModule } from '@angular/router';
 import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
 import { ToastrService } from 'ngx-toastr';
 
@@ -21,7 +22,7 @@ interface ReadingStats {
 @Component({
   selector: 'app-profile',
   standalone: true,
-  imports: [CommonModule, RouterModule],
+  imports: [CommonModule, RouterModule, FormsModule],
   templateUrl: './profile.html',
   styleUrl: './profile.css'
 })
@@ -29,6 +30,12 @@ export class ProfileComponent implements OnInit {
   user = computed(() => this.authService.user());
   isAuthenticated = computed(() => this.authService.authenticated());
   stats: ReadingStats | null = null;
+
+  // Edit profile state
+  editing = signal(false);
+  editForm = signal({ username: '', email: '', password: '', confirmPassword: '' });
+  editError = signal('');
+  editSaving = signal(false);
 
   constructor(
     private readonly authService: AuthService,
@@ -38,7 +45,6 @@ export class ProfileComponent implements OnInit {
   ) {}
 
   ngOnInit(): void {
-    // Redirect to login if not authenticated
     if (!this.isAuthenticated()) {
       this.router.navigate(['/login']);
       return;
@@ -57,7 +63,7 @@ export class ProfileComponent implements OnInit {
             this.stats = response.stats;
           }
         },
-        error: (err) => {
+        error: () => {
           this.toastr.error('Failed to load reading statistics', 'Error');
         }
       });
@@ -68,7 +74,59 @@ export class ProfileComponent implements OnInit {
   }
 
   editProfile() {
-    // TODO: Implement profile editing functionality
-    this.toastr.info('Profile editing coming soon!', 'Feature Not Available');
+    const u = this.user();
+    if (!u) return;
+    this.editForm.set({ username: u.username, email: u.email, password: '', confirmPassword: '' });
+    this.editError.set('');
+    this.editing.set(true);
+  }
+
+  cancelEdit() {
+    this.editing.set(false);
+    this.editError.set('');
+  }
+
+  async saveProfile() {
+    const form = this.editForm();
+
+    if (!form.username.trim() || !form.email.trim()) {
+      this.editError.set('Username and email are required.');
+      return;
+    }
+    if (form.password && form.password !== form.confirmPassword) {
+      this.editError.set('Passwords do not match.');
+      return;
+    }
+
+    this.editSaving.set(true);
+    this.editError.set('');
+
+    const payload: { username?: string; email?: string; password?: string } = {
+      username: form.username.trim(),
+      email: form.email.trim(),
+    };
+    if (form.password) payload.password = form.password;
+
+    this.http.put<{ success: boolean; message?: string }>('/api/user/profile', payload)
+      .subscribe({
+        next: (res) => {
+          if (res.success) {
+            // Update local user state
+            const updated = { ...this.user()!, username: payload.username!, email: payload.email! };
+            localStorage.setItem('currentUser', JSON.stringify(updated));
+            // Force signal update via auth service re-read
+            (this.authService as any).currentUser.set(updated);
+            this.toastr.success('Profile updated', 'Success');
+            this.editing.set(false);
+          } else {
+            this.editError.set(res.message || 'Update failed.');
+          }
+          this.editSaving.set(false);
+        },
+        error: () => {
+          this.editError.set('Failed to save changes. Please try again.');
+          this.editSaving.set(false);
+        }
+      });
   }
 }

@@ -17,5 +17,6 @@ export const routes: Routes = [
   { path: 'library', component: LibraryComponent, canActivate: [authGuard] },
   { path: 'search', component: MangaSearchComponent },
   { path: 'manga/:id', component: MangaDetailComponent },
+  { path: 'manga/:id/chapter/:chapterId', component: MangaDetailComponent },
   { path: '**', redirectTo: '/home' }
 ];

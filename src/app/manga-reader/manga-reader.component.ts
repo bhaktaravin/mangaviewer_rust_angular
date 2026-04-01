@@ -1,6 +1,5 @@
-import { Component, Input, signal } from '@angular/core';
+import { Component, Input, signal, Output, EventEmitter } from '@angular/core';
 import { Chapter } from '../manga-detail/manga-detail.component';
-
 import { CommonModule } from '@angular/common';
 @Component({
   selector: 'app-manga-reader',
@@ -15,8 +14,8 @@ export class MangaReaderComponent {
   @Input() show = false;
   @Input() onClose: (() => void) | null = null;
   @Input() loading = false;
+  @Output() pageChanged = new EventEmitter<{ page: number; total: number }>();
 
-  // Reading modes: 'vertical', 'horizontal', 'single', 'double'
   mode = signal<'vertical' | 'horizontal' | 'single' | 'double'>('vertical');
   currentPage = signal(0);
 
@@ -27,12 +26,16 @@ export class MangaReaderComponent {
 
   prevPage() {
     const step = this.mode() === 'double' ? 2 : 1;
-    this.currentPage.set(Math.max(0, this.currentPage() - step));
+    const next = Math.max(0, this.currentPage() - step);
+    this.currentPage.set(next);
+    this.pageChanged.emit({ page: next + 1, total: this.images.length });
   }
 
   nextPage() {
     const step = this.mode() === 'double' ? 2 : 1;
-    this.currentPage.set(Math.min(this.images.length - step, this.currentPage() + step));
+    const next = Math.min(this.images.length - step, this.currentPage() + step);
+    this.currentPage.set(next);
+    this.pageChanged.emit({ page: next + 1, total: this.images.length });
   }
 
   get hasPrev() { return this.currentPage() > 0; }

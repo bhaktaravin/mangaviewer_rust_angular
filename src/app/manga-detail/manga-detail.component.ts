@@ -32,6 +32,7 @@ import { Apiservice } from '../apiservice';
 import { CommonModule } from '@angular/common';
 import { CoverImageService } from '../cover-image.service';
 import { DisclaimerComponent } from '../disclaimer/disclaimer.component';
+import { HttpClient } from '@angular/common/http';
 
 
 interface DownloadSettings {
@@ -113,6 +114,20 @@ export class MangaDetailComponent implements OnInit {
     this.readerChapter.set(null);
     this.readerImages.set([]);
   };
+
+  onPageChanged(event: { page: number; total: number }) {
+    const chapter = this.readerChapter();
+    const userId = this.authService.getUserId();
+    if (!chapter || !userId || !this.manga) return;
+
+    this.http.post('/api/progress/update', {
+      user_id: userId,
+      manga_id: this.manga.id,
+      chapter_id: chapter.id,
+      current_page: event.page,
+      total_pages: event.total
+    }).subscribe({ error: (e) => console.warn('Progress save failed:', e) });
+  }
   showDownloadModal = signal(false);
   selectedChapter = signal<Chapter | null>(null);
   downloadSettings = signal<DownloadSettings>({
@@ -140,7 +155,8 @@ export class MangaDetailComponent implements OnInit {
     private readonly router: Router,
     private readonly coverService: CoverImageService,
     private readonly authService: AuthService,
-    private readonly toastr: ToastrService
+    private readonly toastr: ToastrService,
+    private readonly http: HttpClient
   ) {}
 
   ngOnInit() {
