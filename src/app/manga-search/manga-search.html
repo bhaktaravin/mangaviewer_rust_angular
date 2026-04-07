@@ -128,15 +128,15 @@
   </div>
 
   @if (searchResults().length > 0) {
-    <div class="results-section">
+    <div class="results-section fade-in">
       <div class="results-header">
         <h3>Results</h3>
         <span class="results-count">{{ searchResults().length }}{{ hasMore() ? '+' : '' }} found</span>
       </div>
 
       <div class="manga-grid">
-        @for (manga of searchResults(); track manga.id) {
-          <div class="manga-card" (click)="showMangaDetails(manga)">
+        @for (manga of searchResults(); track manga.id; let i = $index) {
+          <div class="manga-card stagger-item hover-scale" (click)="showMangaDetails(manga)">
             <div class="manga-image">
               <button
                 class="favorite-btn"
@@ -146,12 +146,11 @@
               >
                 {{ isFavorite(manga.id) ? '⭐' : '☆' }}
               </button>
-              <img
+              <app-image-loader
                 [src]="getCoverUrl(manga.id)"
                 [alt]="manga.attributes.title['en'] || 'Cover'"
-                loading="lazy"
-                (error)="$event.target.src='https://via.placeholder.com/230x320/1e1e2e/667eea?text=No+Cover'"
-              />
+                placeholderIcon="📚"
+              ></app-image-loader>
               <div class="manga-hover-overlay">
                 <div class="hover-content">
                   <h4 class="hover-title">{{ manga.attributes.title['en'] || 'Unknown Title' }}</h4>
@@ -193,22 +192,32 @@
     </div>
   }
 
-  @if (!loading() && searchQuery() && searchResults().length === 0 && !error()) {
-    <div class="no-results">
-      <div class="no-results-icon">🔍</div>
-      <h3>No results found</h3>
-      <p>Try different keywords or check your spelling</p>
-    </div>
+  <!-- Loading State -->
+  @if (loading() && searchResults().length === 0) {
+    <app-skeleton-loader type="grid"></app-skeleton-loader>
   }
 
-  @if (!searchQuery() && searchResults().length === 0) {
-    <div class="search-suggestions">
+  <!-- Empty State - No Results -->
+  @if (!loading() && searchQuery() && searchResults().length === 0 && !error()) {
+    <app-empty-state
+      type="search"
+      icon="🔍"
+      title="No results found"
+      message="No manga found. Try different keywords or check your spelling."
+      actionText="Clear Search"
+      [actionCallback]="clearSearch.bind(this)"
+    ></app-empty-state>
+  }
+
+  <!-- Empty State - Initial -->
+  @if (!searchQuery() && searchResults().length === 0 && !loading()) {
+    <div class="search-suggestions fade-in">
       <h3>💡 Search Tips</h3>
       <div class="tips-grid">
-        <div class="tip-card"><span class="tip-icon">📝</span><p>Search by title</p></div>
-        <div class="tip-card"><span class="tip-icon">👤</span><p>Search by author</p></div>
-        <div class="tip-card"><span class="tip-icon">🏷️</span><p>Browse by genre</p></div>
-        <div class="tip-card"><span class="tip-icon">🌏</span><p>Find any language</p></div>
+        <div class="tip-card scale-in"><span class="tip-icon">📝</span><p>Search by title</p></div>
+        <div class="tip-card scale-in"><span class="tip-icon">👤</span><p>Search by author</p></div>
+        <div class="tip-card scale-in"><span class="tip-icon">🏷️</span><p>Browse by genre</p></div>
+        <div class="tip-card scale-in"><span class="tip-icon">🌏</span><p>Find any language</p></div>
       </div>
     </div>
   }

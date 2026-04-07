@@ -87,32 +87,50 @@
   </div>
 
   <!-- Error State -->
-  <div class="error-state" *ngIf="error && !loading">
-    <p class="error-message">{{ error }}</p>
-    <button class="retry-btn" (click)="loadLibrary()">Retry</button>
+  <!-- Loading State -->
+  <div *ngIf="loading">
+    <app-skeleton-loader type="grid"></app-skeleton-loader>
   </div>
 
-  <!-- Empty State -->
-  <div class="empty-state" *ngIf="!loading && !error && filteredLibrary.length === 0 && library.length === 0">
-    <div class="empty-icon">📚</div>
-    <h2>Your library is empty</h2>
-    <p>Start adding manga to track your reading progress!</p>
-    <a routerLink="/manga-search" class="browse-btn">Browse Manga</a>
+  <!-- Error State -->
+  <div *ngIf="error && !loading">
+    <app-empty-state
+      type="error"
+      icon="⚠️"
+      title="Oops! Something went wrong"
+      [message]="error"
+      actionText="Try Again"
+      [actionCallback]="loadLibrary.bind(this)"
+    ></app-empty-state>
   </div>
 
-  <!-- No Results State -->
-  <div class="empty-state" *ngIf="!loading && !error && filteredLibrary.length === 0 && library.length > 0">
-    <div class="empty-icon">🔍</div>
-    <h2>No manga found</h2>
-    <p>Try adjusting your filters or search query.</p>
-    <button class="clear-btn" (click)="selectedStatus = 'All'; searchQuery = ''; filterLibrary()">
-      Clear Filters
-    </button>
+  <!-- Empty State - No Library -->
+  <div *ngIf="!loading && !error && filteredLibrary.length === 0 && library.length === 0">
+    <app-empty-state
+      type="library"
+      icon="📚"
+      title="Your library is empty"
+      message="Start adding manga to track your reading progress!"
+      actionText="Browse Manga"
+      actionLink="/search"
+    ></app-empty-state>
+  </div>
+
+  <!-- Empty State - No Results -->
+  <div *ngIf="!loading && !error && filteredLibrary.length === 0 && library.length > 0">
+    <app-empty-state
+      type="search"
+      icon="🔍"
+      title="No manga found"
+      message="Try adjusting your filters or search query."
+      actionText="Clear Filters"
+      [actionCallback]="clearFilters.bind(this)"
+    ></app-empty-state>
   </div>
 
   <!-- Library Grid -->
-  <div class="library-grid" *ngIf="!loading && !error && filteredLibrary.length > 0">
-    <div class="library-card" *ngFor="let entry of filteredLibrary">
+  <div class="library-grid fade-in" *ngIf="!loading && !error && filteredLibrary.length > 0">
+    <div class="library-card stagger-item hover-scale" *ngFor="let entry of filteredLibrary; let i = index">
       <!-- Favorite Button -->
       <button
         class="favorite-btn-library"

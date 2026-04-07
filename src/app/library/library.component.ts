@@ -8,6 +8,9 @@ import { ToastrService } from 'ngx-toastr';
 import { AuthService } from '../auth.service';
 import { CoverImageService } from '../cover-image.service';
 import { FormsModule } from '@angular/forms';
+import { SkeletonLoaderComponent } from '../skeleton-loader/skeleton-loader.component';
+import { EmptyStateComponent } from '../empty-state/empty-state.component';
+import { ImageLoaderComponent } from '../image-loader/image-loader.component';
 
 interface ReadingProgress {
   chapter_id: string;
@@ -51,7 +54,7 @@ interface ReadingStats {
 @Component({
   selector: 'app-library',
   standalone: true,
-  imports: [CommonModule, RouterModule, FormsModule],
+  imports: [CommonModule, RouterModule, FormsModule, SkeletonLoaderComponent, EmptyStateComponent, ImageLoaderComponent],
   templateUrl: './library.component.html',
   styleUrls: ['./library.component.css']
 })
@@ -235,6 +238,12 @@ export class LibraryComponent implements OnInit {
 
   isFavorite(entry: LibraryEntry): boolean {
     return (entry as any).favorite === true;
+  }
+
+  clearFilters(): void {
+    this.selectedStatus = 'All';
+    this.searchQuery = '';
+    this.filterLibrary();
   }
 
   onStatusChange(status: string): void {

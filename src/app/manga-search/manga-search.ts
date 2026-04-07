@@ -6,6 +6,9 @@ import { Title } from '@angular/platform-browser';
 import { HttpClient } from '@angular/common/http';
 import { Apiservice } from '../apiservice';
 import { DisclaimerComponent } from '../disclaimer/disclaimer.component';
+import { SkeletonLoaderComponent } from '../skeleton-loader/skeleton-loader.component';
+import { EmptyStateComponent } from '../empty-state/empty-state.component';
+import { ImageLoaderComponent } from '../image-loader/image-loader.component';
 import { Manga } from '../interfaces/manga';
 import { AuthService } from '../auth.service';
 import { ToastrService } from 'ngx-toastr';
@@ -23,7 +26,7 @@ interface SearchFilters {
 @Component({
   selector: 'app-manga-search',
   standalone: true,
-  imports: [CommonModule, FormsModule, DisclaimerComponent],
+  imports: [CommonModule, FormsModule, DisclaimerComponent, SkeletonLoaderComponent, EmptyStateComponent, ImageLoaderComponent],
   templateUrl: './manga-search.html',
   styleUrl: './manga-search.css'
 })
