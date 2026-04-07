@@ -525,3 +525,80 @@ pub async fn get_continue_reading_handler(
         ),
     }
 }
+
+// ====== Favorites Handlers ======
+
+#[derive(Deserialize)]
+pub struct ToggleFavoriteRequest {
+    pub user_id: String,
+    pub manga_id: String,
+}
+
+#[derive(Deserialize)]
+pub struct GetFavoritesQuery {
+    pub user_id: String,
+    #[serde(default = "default_page")]
+    pub page: u32,
+    #[serde(default = "default_limit")]
+    pub limit: u32,
+}
+
+fn default_page() -> u32 {
+    1
+}
+
+fn default_limit() -> u32 {
+    50
+}
+
+/// Toggle favorite status
+pub async fn toggle_favorite_handler(
+    State(state): State<AppState>,
+    Json(req): Json<ToggleFavoriteRequest>,
+) -> impl IntoResponse {
+    match state.progress_service
+        .toggle_favorite(&req.user_id, &req.manga_id)
+        .await
+    {
+        Ok(is_favorite) => (
+            StatusCode::OK,
+            Json(serde_json::json!({
+                "success": true,
+                "is_favorite": is_favorite
+            })),
+        ),
+        Err(e) => (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(serde_json::json!({
+                "success": false,
+                "error": e.to_string()
+            })),
+        ),
+    }
+}
+
+/// Get favorite manga
+pub async fn get_favorites_handler(
+    State(state): State<AppState>,
+    Query(query): Query<GetFavoritesQuery>,
+) -> impl IntoResponse {
+    match state.progress_service
+        .get_favorites(&query.user_id, query.page, query.limit)
+        .await
+    {
+        Ok(favorites) => (
+            StatusCode::OK,
+            Json(serde_json::json!({
+                "success": true,
+                "favorites": favorites
+            })),
+        ),
+        Err(e) => (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(serde_json::json!({
+                "success": false,
+                "error": e.to_string()
+            })),
+        ),
+    }
+}

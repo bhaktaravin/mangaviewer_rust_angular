@@ -113,6 +113,16 @@
   <!-- Library Grid -->
   <div class="library-grid" *ngIf="!loading && !error && filteredLibrary.length > 0">
     <div class="library-card" *ngFor="let entry of filteredLibrary">
+      <!-- Favorite Button -->
+      <button
+        class="favorite-btn-library"
+        [class.is-favorite]="isFavorite(entry)"
+        (click)="toggleFavorite(entry, $event)"
+        title="{{ isFavorite(entry) ? 'Remove from favorites' : 'Add to favorites' }}"
+      >
+        {{ isFavorite(entry) ? '⭐' : '☆' }}
+      </button>
+      
       <!-- Cover Image -->
       <div class="card-cover" 
            (click)="viewManga(entry.manga_id)"

@@ -3,11 +3,22 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { Title } from '@angular/platform-browser';
+import { HttpClient } from '@angular/common/http';
 import { Apiservice } from '../apiservice';
 import { DisclaimerComponent } from '../disclaimer/disclaimer.component';
 import { Manga } from '../interfaces/manga';
 import { AuthService } from '../auth.service';
 import { ToastrService } from 'ngx-toastr';
+
+interface SearchFilters {
+  query: string;
+  tags?: string[];
+  status?: string[];
+  year_from?: number;
+  year_to?: number;
+  sort_by?: string;
+  sort_order?: string;
+}
 
 @Component({
   selector: 'app-manga-search',
@@ -24,7 +35,39 @@ export class MangaSearchComponent implements OnInit {
   hasMore = signal(false);
   currentPage = signal(1);
   addedToLibrary = new Set<string>();
+  favoriteManga = new Set<string>();
   coverUrls = new Map<string, string>();
+  showFilters = signal(false);
+  
+  // Filter signals
+  selectedTags = signal<string[]>([]);
+  selectedStatus = signal<string[]>([]);
+  yearFrom = signal<number | undefined>(undefined);
+  yearTo = signal<number | undefined>(undefined);
+  sortBy = signal('relevance');
+  sortOrder = signal('desc');
+  
+  // Available filter options
+  availableTags = [
+    'Action', 'Adventure', 'Comedy', 'Drama', 'Fantasy',
+    'Horror', 'Mystery', 'Romance', 'Sci-Fi', 'Slice of Life',
+    'Sports', 'Supernatural', 'Thriller'
+  ];
+  
+  availableStatuses = [
+    { value: 'ongoing', label: 'Ongoing' },
+    { value: 'completed', label: 'Completed' },
+    { value: 'hiatus', label: 'Hiatus' },
+    { value: 'cancelled', label: 'Cancelled' }
+  ];
+  
+  sortOptions = [
+    { value: 'relevance', label: 'Relevance' },
+    { value: 'title', label: 'Title' },
+    { value: 'year', label: 'Year' },
+    { value: 'rating', label: 'Rating' }
+  ];
+
   private externalTotal = 0;
   private readonly PAGE_SIZE = 100;
 
@@ -104,11 +147,71 @@ export class MangaSearchComponent implements OnInit {
     private readonly router: Router,
     private readonly titleService: Title,
     private readonly authService: AuthService,
-    private readonly toastr: ToastrService
+    private readonly toastr: ToastrService,
+    private readonly http: HttpClient
   ) {}
 
   ngOnInit() {
     this.titleService.setTitle('Search Manga - Manga Viewer');
+    this.loadFavorites();
+  }
+
+  private loadFavorites() {
+    const userId = this.authService.getUserId();
+    if (!userId) return;
+
+    this.http.get<{ success: boolean; favorites: any[] }>(
+      `/api/favorites?user_id=${userId}`
+    ).subscribe({
+      next: (response) => {
+        if (response.success) {
+          response.favorites.forEach(fav => this.favoriteManga.add(fav.manga_id));
+        }
+      },
+      error: (error) => console.error('Error loading favorites:', error)
+    });
+  }
+
+  toggleFilters() {
+    this.showFilters.set(!this.showFilters());
+  }
+
+  toggleTag(tag: string) {
+    const current = this.selectedTags();
+    if (current.includes(tag)) {
+      this.selectedTags.set(current.filter(t => t !== tag));
+    } else {
+      this.selectedTags.set([...current, tag]);
+    }
+  }
+
+  toggleStatus(status: string) {
+    const current = this.selectedStatus();
+    if (current.includes(status)) {
+      this.selectedStatus.set(current.filter(s => s !== status));
+    } else {
+      this.selectedStatus.set([...current, status]);
+    }
+  }
+
+  clearFilters() {
+    this.selectedTags.set([]);
+    this.selectedStatus.set([]);
+    this.yearFrom.set(undefined);
+    this.yearTo.set(undefined);
+    this.sortBy.set('relevance');
+    this.sortOrder.set('desc');
+  }
+
+  hasActiveFilters(): boolean {
+    return this.selectedTags().length > 0 ||
+           this.selectedStatus().length > 0 ||
+           this.yearFrom() !== undefined ||
+           this.yearTo() !== undefined;
+  }
+
+  getCurrentYear(): number {
+    return new Date().getFullYear();
   }
 
   async onSearch() {
@@ -253,8 +356,42 @@ export class MangaSearchComponent implements OnInit {
     }
   }
 
+  async toggleFavorite(manga: Manga, event: Event) {
+    event.stopPropagation();
+    
+    if (!this.authService.isAuthenticated()) {
+      this.router.navigate(['/login']);
+      return;
+    }
+
+    const userId = this.authService.getUserId();
+    if (!userId) return;
+
+    try {
+      const response = await this.http.post<{ success: boolean; is_favorite: boolean }>(
+        '/api/favorites/toggle',
+        { user_id: userId, manga_id: manga.id }
+      ).toPromise();
+
+      if (response?.success) {
+        if (response.is_favorite) {
+          this.favoriteManga.add(manga.id);
+          this.toastr.success('Added to favorites', 'Success');
+        } else {
+          this.favoriteManga.delete(manga.id);
+          this.toastr.success('Removed from favorites', 'Success');
+        }
+      }
+    } catch {
+      this.toastr.error('Failed to update favorite', 'Error');
+    }
+  }
+
+  isFavorite(mangaId: string): boolean {
+    return this.favoriteManga.has(mangaId);
+  }
+
   showMangaDetails(manga: Manga) {
-    // Navigate to manga detail page
     this.router.navigate(['/manga', manga.id], { state: { manga: manga } });
   }
 }

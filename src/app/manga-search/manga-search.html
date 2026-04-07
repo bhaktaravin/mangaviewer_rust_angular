@@ -17,6 +17,12 @@
         autofocus
       />
       <div class="search-buttons">
+        <button class="btn btn-filters" (click)="toggleFilters()" [class.active]="showFilters()">
+          🎛️ Filters
+          @if (hasActiveFilters()) {
+            <span class="filter-badge">{{ selectedTags().length + selectedStatus().length }}</span>
+          }
+        </button>
         <button class="btn btn-primary" (click)="onSearch()" [disabled]="loading() || !searchQuery().trim()">
           @if (loading()) {
             <span class="spinner"></span> Searching...
@@ -29,6 +35,92 @@
         }
       </div>
     </div>
+
+    <!-- Advanced Filters Panel -->
+    @if (showFilters()) {
+      <div class="filters-panel">
+        <div class="filters-header">
+          <h3>Advanced Filters</h3>
+          @if (hasActiveFilters()) {
+            <button class="btn-clear-filters" (click)="clearFilters()">Clear All</button>
+          }
+        </div>
+
+        <!-- Tags Filter -->
+        <div class="filter-group">
+          <label class="filter-label">Genres & Tags</label>
+          <div class="tag-grid">
+            @for (tag of availableTags; track tag) {
+              <button
+                class="tag-chip"
+                [class.selected]="selectedTags().includes(tag)"
+                (click)="toggleTag(tag)"
+              >
+                {{ tag }}
+              </button>
+            }
+          </div>
+        </div>
+
+        <!-- Status Filter -->
+        <div class="filter-group">
+          <label class="filter-label">Status</label>
+          <div class="status-grid">
+            @for (status of availableStatuses; track status.value) {
+              <button
+                class="status-chip"
+                [class.selected]="selectedStatus().includes(status.value)"
+                (click)="toggleStatus(status.value)"
+              >
+                {{ status.label }}
+              </button>
+            }
+          </div>
+        </div>
+
+        <!-- Year Range Filter -->
+        <div class="filter-group">
+          <label class="filter-label">Publication Year</label>
+          <div class="year-range">
+            <input
+              type="number"
+              [ngModel]="yearFrom()"
+              (ngModelChange)="yearFrom.set($event)"
+              placeholder="From"
+              min="1900"
+              [max]="yearTo() || getCurrentYear()"
+              class="year-input"
+            />
+            <span class="year-separator">to</span>
+            <input
+              type="number"
+              [ngModel]="yearTo()"
+              (ngModelChange)="yearTo.set($event)"
+              placeholder="To"
+              [min]="yearFrom() || 1900"
+              [max]="getCurrentYear()"
+              class="year-input"
+            />
+          </div>
+        </div>
+
+        <!-- Sort Options -->
+        <div class="filter-group">
+          <label class="filter-label">Sort By</label>
+          <div class="sort-options">
+            <select [ngModel]="sortBy()" (ngModelChange)="sortBy.set($event)" class="sort-select">
+              @for (option of sortOptions; track option.value) {
+                <option [value]="option.value">{{ option.label }}</option>
+              }
+            </select>
+            <select [ngModel]="sortOrder()" (ngModelChange)="sortOrder.set($event)" class="sort-select">
+              <option value="desc">Descending</option>
+              <option value="asc">Ascending</option>
+            </select>
+          </div>
+        </div>
+      </div>
+    }
 
     @if (error()) {
       <div class="error-message">⚠️ {{ error() }}</div>
@@ -46,6 +138,14 @@
         @for (manga of searchResults(); track manga.id) {
           <div class="manga-card" (click)="showMangaDetails(manga)">
             <div class="manga-image">
+              <button
+                class="favorite-btn"
+                [class.is-favorite]="isFavorite(manga.id)"
+                (click)="toggleFavorite(manga, $event)"
+                title="{{ isFavorite(manga.id) ? 'Remove from favorites' : 'Add to favorites' }}"
+              >
+                {{ isFavorite(manga.id) ? '⭐' : '☆' }}
+              </button>
               <img
                 [src]="getCoverUrl(manga.id)"
                 [alt]="manga.attributes.title['en'] || 'Cover'"

@@ -66,9 +66,11 @@ export class LibraryComponent implements OnInit {
   // Filter state
   selectedStatus: string = 'All';
   searchQuery: string = '';
+  showFavoritesOnly = false;
   
   statusOptions = [
     { value: 'All', label: 'All', icon: '📚' },
+    { value: 'Favorites', label: 'Favorites', icon: '⭐' },
     { value: 'Reading', label: 'Reading', icon: '📖' },
     { value: 'Completed', label: 'Completed', icon: '✅' },
     { value: 'PlanToRead', label: 'Plan to Read', icon: '📋' },
@@ -186,8 +188,12 @@ export class LibraryComponent implements OnInit {
   filterLibrary(): void {
     let filtered = [...this.library];
 
+    // Filter by favorites
+    if (this.selectedStatus === 'Favorites') {
+      filtered = filtered.filter(entry => (entry as any).favorite === true);
+    }
     // Filter by status
-    if (this.selectedStatus !== 'All') {
+    else if (this.selectedStatus !== 'All') {
       filtered = filtered.filter(entry => entry.status === this.selectedStatus);
     }
 
@@ -200,6 +206,35 @@ export class LibraryComponent implements OnInit {
     }
 
     this.filteredLibrary = filtered;
+  }
+
+  async toggleFavorite(entry: LibraryEntry, event: Event): Promise<void> {
+    event.stopPropagation();
+    const userId = this.auth.getUserId();
+    if (!userId) return;
+
+    try {
+      const response = await this.http.post<{ success: boolean; is_favorite: boolean }>(
+        '/api/favorites/toggle',
+        { user_id: userId, manga_id: entry.manga_id }
+      ).toPromise();
+
+      if (response?.success) {
+        // Update local state
+        (entry as any).favorite = response.is_favorite;
+        this.filterLibrary();
+        this.toastr.success(
+          response.is_favorite ? 'Added to favorites' : 'Removed from favorites',
+          'Success'
+        );
+      }
+    } catch {
+      this.toastr.error('Failed to update favorite', 'Error');
+    }
+  }
+
+  isFavorite(entry: LibraryEntry): boolean {
+    return (entry as any).favorite === true;
   }
 
   onStatusChange(status: string): void {

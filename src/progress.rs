@@ -408,6 +408,77 @@ impl ProgressService {
         Ok(())
     }
 
+    /// Toggle favorite status
+    pub async fn toggle_favorite(
+        &self,
+        user_id: &str,
+        manga_id: &str,
+    ) -> Result<bool, Box<dyn std::error::Error>> {
+        let library = self.library_collection();
+
+        // Get current favorite status
+        let entry = library
+            .find_one(doc! {
+                "user_id": user_id,
+                "manga_id": manga_id
+            })
+            .await?;
+
+        let new_favorite = !entry.map(|e| e.favorite).unwrap_or(false);
+
+        library
+            .update_one(
+                doc! {
+                    "user_id": user_id,
+                    "manga_id": manga_id
+                },
+                doc! {
+                    "$set": {
+                        "favorite": new_favorite,
+                        "updated_at": chrono::Utc::now().to_rfc3339()
+                    }
+                },
+            )
+            .await?;
+
+        tracing::info!(
+            "⭐ Toggled favorite for manga {} (user {}): {}",
+            manga_id,
+            user_id,
+            new_favorite
+        );
+
+        Ok(new_favorite)
+    }
+
+    /// Get favorite manga
+    pub async fn get_favorites(
+        &self,
+        user_id: &str,
+        page: u32,
+        limit: u32,
+    ) -> Result<Vec<LibraryEntry>, Box<dyn std::error::Error>> {
+        let library = self.library_collection();
+
+        let skip = ((page - 1) * limit) as u64;
+        let mut cursor = library
+            .find(doc! {
+                "user_id": user_id,
+                "favorite": true
+            })
+            .sort(doc! { "updated_at": -1 })
+            .skip(skip)
+            .limit(limit as i64)
+            .await?;
+
+        let mut entries = Vec::new();
+        while cursor.advance().await? {
+            entries.push(cursor.deserialize_current()?);
+        }
+
+        Ok(entries)
+    }
+
     /// Get reading statistics for user
     pub async fn get_reading_stats(
         &self,

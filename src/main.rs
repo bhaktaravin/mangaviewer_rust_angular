@@ -40,6 +40,7 @@ use handlers::{
     update_status_handler, remove_from_library_handler,
     add_bookmark_handler, get_bookmarks_handler, delete_bookmark_handler,
     add_history_handler, get_history_handler, get_continue_reading_handler,
+    toggle_favorite_handler, get_favorites_handler,
     AppState,
 };
 use manga_service::{
@@ -576,6 +577,8 @@ async fn main() {
         .route("/api/history/add", post(add_history_handler))
         .route("/api/history", get(get_history_handler))
         .route("/api/continue-reading", get(get_continue_reading_handler))
+        .route("/api/favorites/toggle", post(toggle_favorite_handler))
+        .route("/api/favorites", get(get_favorites_handler))
         .with_state(app_state);
 
     let admin_routes = Router::new();
