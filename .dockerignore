@@ -1,33 +1,20 @@
-.git/
-.github/
-.vscode/
-.env.local
-.openai_key.example
+# Git
+.git
+.gitignore
+.github
 
-# Target directory (Rust build artifacts)
-target/
+# Node modules and dependencies
+node_modules
+npm-debug.log
+yarn-error.log
 
-# Test files
-test_*.rs
-*_test.sh
-interactive_test.sh
-manual_test.sh
-test_ai.sh
-test_deployment.sh
-test_info.sh
+# Angular build artifacts
+dist
+.angular
 
-# Demo and development files
-demo_server.rs
-mock_data.rs
-
-# Documentation
-AI_FEATURES.md
-DEPLOY_GUIDE.sh
-
-# Scripts
-deploy.sh
-
-# IDE files
+# IDE and editor files
+.vscode
+.idea
 *.swp
 *.swo
 *~
@@ -36,9 +23,45 @@ deploy.sh
 .DS_Store
 Thumbs.db
 
+# Documentation
+*.md
+!README.md
+
+# Docker files
+docker-compose.yml
+.dockerignore
+Dockerfile
+
+# Environment files
+.env
+.env.*
+
+# Test files
+tests
+*.test.ts
+*.spec.ts
+
+# Backup files
+backups
+*.tar.gz
+
+# Scripts
+deploy.sh
+backup.sh
+restore.sh
+
+# Cargo build artifacts (will be built in container)
+target
+Cargo.lock
+
+# Temporary files
+tmp
+temp
+*.tmp
+
 # Logs
 *.log
+logs
 
-# Miscellaneous
-*.tmp
-*.sh
+# Manga storage (mounted as volume)
+manga_storage
