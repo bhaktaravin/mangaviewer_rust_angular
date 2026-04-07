@@ -89,6 +89,7 @@ pub enum MangaDexClientError {
 }
 
 // --- MangaDexClient ---
+#[derive(Clone)]
 pub struct MangaDexClient {
     client: Client,
     base_url: String,
