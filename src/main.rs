@@ -38,6 +38,8 @@ use handlers::{
     add_to_library_handler, advanced_search_handler, autocomplete_handler,
     get_library_handler, get_reading_stats_handler, update_progress_handler,
     update_status_handler, remove_from_library_handler,
+    add_bookmark_handler, get_bookmarks_handler, delete_bookmark_handler,
+    add_history_handler, get_history_handler, get_continue_reading_handler,
     AppState,
 };
 use manga_service::{
@@ -568,6 +570,12 @@ async fn main() {
         .route("/api/progress/library/status", post(update_status_handler))
         .route("/api/progress/library/remove", post(remove_from_library_handler))
         .route("/api/progress/stats", get(get_reading_stats_handler))
+        .route("/api/bookmarks/add", post(add_bookmark_handler))
+        .route("/api/bookmarks", get(get_bookmarks_handler))
+        .route("/api/bookmarks/delete", post(delete_bookmark_handler))
+        .route("/api/history/add", post(add_history_handler))
+        .route("/api/history", get(get_history_handler))
+        .route("/api/continue-reading", get(get_continue_reading_handler))
         .with_state(app_state);
 
     let admin_routes = Router::new();

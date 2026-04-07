@@ -8,6 +8,51 @@
         <p class="welcome-subtitle">Ready to dive into your manga collection?</p>
       </section>
 
+      <!-- Continue Reading Section -->
+      @if (continueReading().length > 0) {
+        <section class="continue-reading-section">
+          <h2>📖 Continue Reading</h2>
+          <div class="continue-reading-grid">
+            @for (item of continueReading(); track item.manga_id) {
+              <div class="continue-card" (click)="goToManga(item.manga_id)">
+                <div class="continue-progress">
+                  <div class="progress-bar">
+                    <div class="progress-fill" [style.width.%]="item.progress_percentage"></div>
+                  </div>
+                  <span class="progress-text">{{ item.progress_percentage | number:'1.0-0' }}%</span>
+                </div>
+                <div class="continue-info">
+                  <p class="continue-chapter">Chapter {{ item.current_chapter }}</p>
+                  <p class="continue-page">Page {{ item.current_page }}</p>
+                  <p class="continue-date">{{ item.last_read_at | date:'short' }}</p>
+                </div>
+              </div>
+            }
+          </div>
+        </section>
+      }
+
+      <!-- Reading History Section -->
+      @if (readingHistory().length > 0) {
+        <section class="history-section">
+          <h2>📚 Recent Activity</h2>
+          <div class="history-list">
+            @for (entry of readingHistory(); track entry.timestamp) {
+              <div class="history-item" (click)="goToManga(entry.manga_id)">
+                <div class="history-icon">📖</div>
+                <div class="history-details">
+                  <p class="history-title">{{ entry.manga_title }}</p>
+                  <p class="history-chapter">
+                    {{ entry.chapter_title || 'Chapter ' + entry.chapter_id }} - Page {{ entry.page_number }}
+                  </p>
+                  <p class="history-time">{{ entry.timestamp | date:'short' }}</p>
+                </div>
+              </div>
+            }
+          </div>
+        </section>
+      }
+
       <section class="features-section">
         <div class="feature-grid">
           <div class="feature-card">

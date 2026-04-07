@@ -7,6 +7,8 @@
         <button (click)="setMode('horizontal')" [class.active]="mode() === 'horizontal'" title="Horizontal (2)">↔</button>
         <button (click)="setMode('single')" [class.active]="mode() === 'single'" title="Single page (3)">□</button>
         <button (click)="setMode('double')" [class.active]="mode() === 'double'" title="Double page (4)">▭</button>
+        <button (click)="openBookmarkDialog()" title="Add bookmark (B)">🔖</button>
+        <button (click)="toggleBookmarksList()" title="View bookmarks (L)" [class.active]="showBookmarksList()">📚</button>
         <button (click)="showShortcuts.set(!showShortcuts())" title="Keyboard shortcuts (?)">⌨</button>
       </div>
       <button class="close-btn" (click)="close()" title="Close (Esc)">×</button>
@@ -24,9 +26,51 @@
           <div class="shortcut-row"><kbd>2</kbd><span>Horizontal scroll</span></div>
           <div class="shortcut-row"><kbd>3</kbd><span>Single page</span></div>
           <div class="shortcut-row"><kbd>4</kbd><span>Double page</span></div>
+          <div class="shortcut-row"><kbd>B</kbd><span>Add bookmark</span></div>
+          <div class="shortcut-row"><kbd>L</kbd><span>View bookmarks</span></div>
           <div class="shortcut-row"><kbd>?</kbd><span>Toggle this panel</span></div>
         </div>
         <button class="shortcuts-close" (click)="showShortcuts.set(false)">Got it</button>
+      </div>
+    </div>
+
+    <!-- Bookmark dialog -->
+    <div class="bookmark-overlay" *ngIf="showBookmarkDialog()" (click)="closeBookmarkDialog()">
+      <div class="bookmark-dialog" (click)="$event.stopPropagation()">
+        <h3>Add Bookmark</h3>
+        <p class="bookmark-info">Page {{ currentPage() + 1 }} of {{ images.length }}</p>
+        <textarea 
+          [(ngModel)]="bookmarkNote" 
+          placeholder="Add a note (optional)..."
+          rows="3"
+          class="bookmark-textarea"
+        ></textarea>
+        <div class="bookmark-actions">
+          <button class="btn-cancel" (click)="closeBookmarkDialog()">Cancel</button>
+          <button class="btn-save" (click)="saveBookmark()">Save Bookmark</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Bookmarks list -->
+    <div class="bookmarks-panel" *ngIf="showBookmarksList()">
+      <div class="bookmarks-header">
+        <h3>Bookmarks</h3>
+        <button class="close-bookmarks" (click)="toggleBookmarksList()">×</button>
+      </div>
+      <div class="bookmarks-list">
+        <div *ngIf="bookmarks().length === 0" class="no-bookmarks">
+          No bookmarks yet. Press <kbd>B</kbd> to add one!
+        </div>
+        <div 
+          *ngFor="let bookmark of bookmarks()" 
+          class="bookmark-item"
+          (click)="jumpToBookmark(bookmark)"
+        >
+          <div class="bookmark-page">Page {{ bookmark.page_number }}</div>
+          <div class="bookmark-note" *ngIf="bookmark.note">{{ bookmark.note }}</div>
+          <div class="bookmark-date">{{ bookmark.created_at | date:'short' }}</div>
+        </div>
       </div>
     </div>
 

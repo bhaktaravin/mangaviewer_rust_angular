@@ -297,3 +297,231 @@ pub async fn autocomplete_handler(
         ),
     }
 }
+
+// ====== Bookmark Handlers ======
+
+#[derive(Deserialize)]
+pub struct AddBookmarkRequest {
+    pub user_id: String,
+    pub manga_id: String,
+    pub chapter_id: String,
+    pub chapter_title: Option<String>,
+    pub page_number: u32,
+    pub note: Option<String>,
+}
+
+#[derive(Deserialize)]
+pub struct GetBookmarksQuery {
+    pub user_id: String,
+    pub manga_id: Option<String>,
+}
+
+#[derive(Deserialize)]
+pub struct DeleteBookmarkRequest {
+    pub user_id: String,
+    pub bookmark_id: String,
+}
+
+/// Add a bookmark
+pub async fn add_bookmark_handler(
+    State(state): State<AppState>,
+    Json(req): Json<AddBookmarkRequest>,
+) -> impl IntoResponse {
+    match state.progress_service
+        .add_bookmark(
+            &req.user_id,
+            &req.manga_id,
+            &req.chapter_id,
+            req.chapter_title,
+            req.page_number,
+            req.note,
+        )
+        .await
+    {
+        Ok(bookmark) => (
+            StatusCode::OK,
+            Json(serde_json::json!({
+                "success": true,
+                "bookmark": bookmark
+            })),
+        ),
+        Err(e) => (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(serde_json::json!({
+                "success": false,
+                "error": e.to_string()
+            })),
+        ),
+    }
+}
+
+/// Get bookmarks
+pub async fn get_bookmarks_handler(
+    State(state): State<AppState>,
+    Query(query): Query<GetBookmarksQuery>,
+) -> impl IntoResponse {
+    match state.progress_service
+        .get_bookmarks(&query.user_id, query.manga_id.as_deref())
+        .await
+    {
+        Ok(bookmarks) => (
+            StatusCode::OK,
+            Json(serde_json::json!({
+                "success": true,
+                "bookmarks": bookmarks
+            })),
+        ),
+        Err(e) => (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(serde_json::json!({
+                "success": false,
+                "error": e.to_string()
+            })),
+        ),
+    }
+}
+
+/// Delete a bookmark
+pub async fn delete_bookmark_handler(
+    State(state): State<AppState>,
+    Json(req): Json<DeleteBookmarkRequest>,
+) -> impl IntoResponse {
+    match state.progress_service
+        .delete_bookmark(&req.user_id, &req.bookmark_id)
+        .await
+    {
+        Ok(_) => (
+            StatusCode::OK,
+            Json(serde_json::json!({
+                "success": true,
+                "message": "Bookmark deleted"
+            })),
+        ),
+        Err(e) => (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(serde_json::json!({
+                "success": false,
+                "error": e.to_string()
+            })),
+        ),
+    }
+}
+
+// ====== Reading History Handlers ======
+
+#[derive(Deserialize)]
+pub struct AddHistoryRequest {
+    pub user_id: String,
+    pub manga_id: String,
+    pub manga_title: String,
+    pub chapter_id: String,
+    pub chapter_title: Option<String>,
+    pub page_number: u32,
+}
+
+#[derive(Deserialize)]
+pub struct GetHistoryQuery {
+    pub user_id: String,
+    #[serde(default = "default_history_limit")]
+    pub limit: u32,
+}
+
+fn default_history_limit() -> u32 {
+    50
+}
+
+#[derive(Deserialize)]
+pub struct GetContinueReadingQuery {
+    pub user_id: String,
+    #[serde(default = "default_continue_limit")]
+    pub limit: u32,
+}
+
+fn default_continue_limit() -> u32 {
+    10
+}
+
+/// Add reading history entry
+pub async fn add_history_handler(
+    State(state): State<AppState>,
+    Json(req): Json<AddHistoryRequest>,
+) -> impl IntoResponse {
+    match state.progress_service
+        .add_history_entry(
+            &req.user_id,
+            &req.manga_id,
+            &req.manga_title,
+            &req.chapter_id,
+            req.chapter_title,
+            req.page_number,
+        )
+        .await
+    {
+        Ok(entry) => (
+            StatusCode::OK,
+            Json(serde_json::json!({
+                "success": true,
+                "entry": entry
+            })),
+        ),
+        Err(e) => (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(serde_json::json!({
+                "success": false,
+                "error": e.to_string()
+            })),
+        ),
+    }
+}
+
+/// Get reading history
+pub async fn get_history_handler(
+    State(state): State<AppState>,
+    Query(query): Query<GetHistoryQuery>,
+) -> impl IntoResponse {
+    match state.progress_service
+        .get_reading_history(&query.user_id, query.limit)
+        .await
+    {
+        Ok(history) => (
+            StatusCode::OK,
+            Json(serde_json::json!({
+                "success": true,
+                "history": history
+            })),
+        ),
+        Err(e) => (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(serde_json::json!({
+                "success": false,
+                "error": e.to_string()
+            })),
+        ),
+    }
+}
+
+/// Get continue reading suggestions
+pub async fn get_continue_reading_handler(
+    State(state): State<AppState>,
+    Query(query): Query<GetContinueReadingQuery>,
+) -> impl IntoResponse {
+    match state.progress_service
+        .get_continue_reading(&query.user_id, query.limit)
+        .await
+    {
+        Ok(suggestions) => (
+            StatusCode::OK,
+            Json(serde_json::json!({
+                "success": true,
+                "suggestions": suggestions
+            })),
+        ),
+        Err(e) => (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(serde_json::json!({
+                "success": false,
+                "error": e.to_string()
+            })),
+        ),
+    }
+}

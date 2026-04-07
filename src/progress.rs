@@ -20,6 +20,34 @@ pub struct ReadingProgress {
     pub reading_time_minutes: u32,
 }
 
+/// Bookmark for a specific page in a chapter
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct Bookmark {
+    #[serde(rename = "_id", skip_serializing_if = "Option::is_none")]
+    pub id: Option<ObjectId>,
+    pub user_id: String,
+    pub manga_id: String,
+    pub chapter_id: String,
+    pub chapter_title: Option<String>,
+    pub page_number: u32,
+    pub note: Option<String>,
+    pub created_at: String,
+}
+
+/// Reading history entry
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct ReadingHistoryEntry {
+    #[serde(rename = "_id", skip_serializing_if = "Option::is_none")]
+    pub id: Option<ObjectId>,
+    pub user_id: String,
+    pub manga_id: String,
+    pub manga_title: String,
+    pub chapter_id: String,
+    pub chapter_title: Option<String>,
+    pub page_number: u32,
+    pub timestamp: String,
+}
+
 /// User library entry with reading progress
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct LibraryEntry {
@@ -130,6 +158,42 @@ impl ProgressService {
             )
             .await?;
 
+        // Bookmark indexes
+        let bookmarks = self.bookmarks_collection();
+        bookmarks
+            .create_index(
+                IndexModel::builder()
+                    .keys(doc! { "user_id": 1, "manga_id": 1 })
+                    .build(),
+            )
+            .await?;
+
+        bookmarks
+            .create_index(
+                IndexModel::builder()
+                    .keys(doc! { "created_at": -1 })
+                    .build(),
+            )
+            .await?;
+
+        // History indexes
+        let history = self.history_collection();
+        history
+            .create_index(
+                IndexModel::builder()
+                    .keys(doc! { "user_id": 1, "timestamp": -1 })
+                    .build(),
+            )
+            .await?;
+
+        history
+            .create_index(
+                IndexModel::builder()
+                    .keys(doc! { "user_id": 1, "manga_id": 1 })
+                    .build(),
+            )
+            .await?;
+
         Ok(())
     }
 
@@ -139,6 +203,14 @@ impl ProgressService {
 
     fn progress_collection(&self) -> Collection<ReadingProgress> {
         self.db.collection("reading_progress")
+    }
+
+    fn bookmarks_collection(&self) -> Collection<Bookmark> {
+        self.db.collection("bookmarks")
+    }
+
+    fn history_collection(&self) -> Collection<ReadingHistoryEntry> {
+        self.db.collection("reading_history")
     }
 
     /// Add manga to user's library
@@ -378,6 +450,158 @@ impl ProgressService {
             plan_to_read: 0,
             total_reading_time_minutes: total_reading_time,
         })
+    }
+
+    /// Add a bookmark
+    pub async fn add_bookmark(
+        &self,
+        user_id: &str,
+        manga_id: &str,
+        chapter_id: &str,
+        chapter_title: Option<String>,
+        page_number: u32,
+        note: Option<String>,
+    ) -> Result<Bookmark, Box<dyn std::error::Error>> {
+        let bookmarks = self.bookmarks_collection();
+        let now = chrono::Utc::now().to_rfc3339();
+
+        let bookmark = Bookmark {
+            id: None,
+            user_id: user_id.to_string(),
+            manga_id: manga_id.to_string(),
+            chapter_id: chapter_id.to_string(),
+            chapter_title,
+            page_number,
+            note,
+            created_at: now,
+        };
+
+        bookmarks.insert_one(&bookmark).await?;
+        tracing::info!("🔖 Added bookmark for user {}, manga {}", user_id, manga_id);
+
+        Ok(bookmark)
+    }
+
+    /// Get bookmarks for a manga
+    pub async fn get_bookmarks(
+        &self,
+        user_id: &str,
+        manga_id: Option<&str>,
+    ) -> Result<Vec<Bookmark>, Box<dyn std::error::Error>> {
+        let bookmarks = self.bookmarks_collection();
+
+        let filter = if let Some(manga_id) = manga_id {
+            doc! { "user_id": user_id, "manga_id": manga_id }
+        } else {
+            doc! { "user_id": user_id }
+        };
+
+        let mut cursor = bookmarks
+            .find(filter)
+            .sort(doc! { "created_at": -1 })
+            .await?;
+
+        let mut results = Vec::new();
+        while cursor.advance().await? {
+            results.push(cursor.deserialize_current()?);
+        }
+
+        Ok(results)
+    }
+
+    /// Delete a bookmark
+    pub async fn delete_bookmark(
+        &self,
+        user_id: &str,
+        bookmark_id: &str,
+    ) -> Result<(), Box<dyn std::error::Error>> {
+        let bookmarks = self.bookmarks_collection();
+        let object_id = ObjectId::parse_str(bookmark_id)?;
+
+        bookmarks
+            .delete_one(doc! {
+                "_id": object_id,
+                "user_id": user_id
+            })
+            .await?;
+
+        tracing::info!("🗑️ Deleted bookmark {} for user {}", bookmark_id, user_id);
+        Ok(())
+    }
+
+    /// Add reading history entry
+    pub async fn add_history_entry(
+        &self,
+        user_id: &str,
+        manga_id: &str,
+        manga_title: &str,
+        chapter_id: &str,
+        chapter_title: Option<String>,
+        page_number: u32,
+    ) -> Result<ReadingHistoryEntry, Box<dyn std::error::Error>> {
+        let history = self.history_collection();
+        let now = chrono::Utc::now().to_rfc3339();
+
+        let entry = ReadingHistoryEntry {
+            id: None,
+            user_id: user_id.to_string(),
+            manga_id: manga_id.to_string(),
+            manga_title: manga_title.to_string(),
+            chapter_id: chapter_id.to_string(),
+            chapter_title,
+            page_number,
+            timestamp: now,
+        };
+
+        history.insert_one(&entry).await?;
+        Ok(entry)
+    }
+
+    /// Get reading history
+    pub async fn get_reading_history(
+        &self,
+        user_id: &str,
+        limit: u32,
+    ) -> Result<Vec<ReadingHistoryEntry>, Box<dyn std::error::Error>> {
+        let history = self.history_collection();
+
+        let mut cursor = history
+            .find(doc! { "user_id": user_id })
+            .sort(doc! { "timestamp": -1 })
+            .limit(limit as i64)
+            .await?;
+
+        let mut results = Vec::new();
+        while cursor.advance().await? {
+            results.push(cursor.deserialize_current()?);
+        }
+
+        Ok(results)
+    }
+
+    /// Get continue reading suggestions (most recent unfinished manga)
+    pub async fn get_continue_reading(
+        &self,
+        user_id: &str,
+        limit: u32,
+    ) -> Result<Vec<ReadingProgress>, Box<dyn std::error::Error>> {
+        let progress = self.progress_collection();
+
+        let mut cursor = progress
+            .find(doc! {
+                "user_id": user_id,
+                "completed": false
+            })
+            .sort(doc! { "last_read_at": -1 })
+            .limit(limit as i64)
+            .await?;
+
+        let mut results = Vec::new();
+        while cursor.advance().await? {
+            results.push(cursor.deserialize_current()?);
+        }
+
+        Ok(results)
     }
 }
 

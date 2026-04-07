@@ -1,11 +1,23 @@
 import { Component, Input, signal, Output, EventEmitter, HostListener } from '@angular/core';
 import { Chapter } from '../manga-detail/manga-detail';
 import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
+
+export interface Bookmark {
+  id?: string;
+  user_id: string;
+  manga_id: string;
+  chapter_id: string;
+  chapter_title?: string;
+  page_number: number;
+  note?: string;
+  created_at: string;
+}
 
 @Component({
   selector: 'app-manga-reader',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, FormsModule],
   templateUrl: './manga-reader.component.html',
   styleUrl: './manga-reader.component.css'
 })
@@ -15,11 +27,18 @@ export class MangaReaderComponent {
   @Input() show = false;
   @Input() onClose: (() => void) | null = null;
   @Input() loading = false;
+  @Input() mangaId = '';
+  @Input() userId = '';
   @Output() pageChanged = new EventEmitter<{ page: number; total: number }>();
+  @Output() bookmarkAdded = new EventEmitter<Bookmark>();
 
   mode = signal<'vertical' | 'horizontal' | 'single' | 'double'>('vertical');
   currentPage = signal(0);
   showShortcuts = signal(false);
+  showBookmarkDialog = signal(false);
+  bookmarkNote = signal('');
+  bookmarks = signal<Bookmark[]>([]);
+  showBookmarksList = signal(false);
 
   @HostListener('document:keydown', ['$event'])
   onKeyDown(e: KeyboardEvent) {
@@ -42,6 +61,8 @@ export class MangaReaderComponent {
       case '2': this.setMode('horizontal'); break;
       case '3': this.setMode('single'); break;
       case '4': this.setMode('double'); break;
+      case 'b': this.openBookmarkDialog(); break;
+      case 'l': this.toggleBookmarksList(); break;
       case '?': this.showShortcuts.set(!this.showShortcuts()); break;
     }
   }
@@ -69,6 +90,46 @@ export class MangaReaderComponent {
   get hasNext() {
     const step = this.mode() === 'double' ? 2 : 1;
     return this.currentPage() + step < this.images.length;
+  }
+
+  openBookmarkDialog() {
+    this.showBookmarkDialog.set(true);
+    this.bookmarkNote.set('');
+  }
+
+  closeBookmarkDialog() {
+    this.showBookmarkDialog.set(false);
+    this.bookmarkNote.set('');
+  }
+
+  saveBookmark() {
+    if (!this.chapter || !this.userId || !this.mangaId) return;
+
+    const bookmark: Bookmark = {
+      user_id: this.userId,
+      manga_id: this.mangaId,
+      chapter_id: this.chapter.id,
+      chapter_title: this.chapter.attributes?.title || undefined,
+      page_number: this.currentPage() + 1,
+      note: this.bookmarkNote() || undefined,
+      created_at: new Date().toISOString()
+    };
+
+    this.bookmarkAdded.emit(bookmark);
+    this.closeBookmarkDialog();
+  }
+
+  toggleBookmarksList() {
+    this.showBookmarksList.set(!this.showBookmarksList());
+  }
+
+  jumpToBookmark(bookmark: Bookmark) {
+    const pageIndex = bookmark.page_number - 1;
+    if (pageIndex >= 0 && pageIndex < this.images.length) {
+      this.currentPage.set(pageIndex);
+      this.pageChanged.emit({ page: bookmark.page_number, total: this.images.length });
+      this.showBookmarksList.set(false);
+    }
   }
 
   close() {

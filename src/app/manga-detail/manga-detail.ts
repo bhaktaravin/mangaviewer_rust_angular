@@ -94,7 +94,7 @@ export class MangaDetailComponent implements OnInit {
     private readonly route: ActivatedRoute,
     private readonly router: Router,
     private readonly http: HttpClient,
-    private readonly auth: AuthService,
+    readonly auth: AuthService,
     private readonly coverService: CoverImageService,
     private readonly toastr: ToastrService,
     private readonly titleService: Title
@@ -182,6 +182,20 @@ export class MangaDetailComponent implements OnInit {
     this.readerImages.set([]);
     this.showReaderModal.set(true);
 
+    // Add to reading history
+    const userId = this.auth.getUserId();
+    if (userId && this.manga) {
+      const mangaTitle = this.manga.attributes?.title?.['en'] || this.manga.attributes?.title?.['ja-ro'] || 'Unknown';
+      this.http.post('/api/history/add', {
+        user_id: userId,
+        manga_id: this.manga.id,
+        manga_title: mangaTitle,
+        chapter_id: chapter.id,
+        chapter_title: chapter.attributes?.title || null,
+        page_number: 1
+      }).subscribe({ error: (e) => console.warn('History save failed:', e) });
+    }
+
     try {
       const response = await firstValueFrom(this.apiService.getChapterDownloadInfo(chapter.id));
       const data = response as any;
@@ -219,6 +233,20 @@ export class MangaDetailComponent implements OnInit {
       current_page: event.page,
       total_pages: event.total
     }).subscribe({ error: (e) => console.warn('Progress save failed:', e) });
+  }
+
+  onBookmarkAdded(bookmark: any) {
+    const userId = this.auth.getUserId();
+    if (!userId) return;
+
+    this.http.post('/api/bookmarks/add', bookmark).subscribe({
+      next: () => {
+        this.toastr.success('Bookmark added', 'Success');
+      },
+      error: () => {
+        this.toastr.error('Failed to add bookmark', 'Error');
+      }
+    });
   }
 
   // ── Library ─────────────────────────────────────────────

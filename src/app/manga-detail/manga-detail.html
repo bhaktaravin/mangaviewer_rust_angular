@@ -96,8 +96,11 @@
       [images]="readerImages()"
       [show]="showReaderModal()"
       [loading]="readerLoading()"
+      [mangaId]="manga?.id || ''"
+      [userId]="auth.getUserId() || ''"
       [onClose]="closeReaderModal"
       (pageChanged)="onPageChanged($event)"
+      (bookmarkAdded)="onBookmarkAdded($event)"
     ></app-manga-reader>
   }
 
