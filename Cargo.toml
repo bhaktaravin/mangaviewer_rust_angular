@@ -58,3 +58,9 @@ bb8 = "0.8"
 bb8-redis = "0.15"
 serde_qs = "0.12"
 sha2 = "0.10"
+
+# S3-compatible storage (Backblaze B2)
+rusoto_core = "0.48"
+rusoto_s3 = "0.48"
+rusoto_credential = "0.48"
+bytes = "1.5"

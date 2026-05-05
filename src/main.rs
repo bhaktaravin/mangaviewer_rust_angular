@@ -23,6 +23,8 @@ use utoipa::OpenApi;
 mod ai_service;
 mod api;
 mod auth_mongodb;
+mod b2_handlers;
+mod b2_storage;
 mod cache;
 mod cached_api;
 mod handlers;
@@ -51,6 +53,11 @@ use manga_service::{
 use progress::ProgressService;
 use search::SearchService;
 use cached_api::CachedMangaDexClient;
+use b2_storage::B2StorageService;
+use b2_handlers::{
+    upload_chapter_to_b2_handler, get_chapter_urls_handler,
+    check_chapter_exists_handler, b2_stats_handler,
+};
 
 // --- HEALTH ENDPOINT ---
 async fn health_handler(State(manga_service): State<MangaService>) -> impl IntoResponse {
@@ -612,6 +619,19 @@ async fn main() {
         println!("ℹ️  MangaDex API caching disabled (Redis not available)");
     }
 
+    // Initialize Backblaze B2 Storage (optional)
+    let b2_service = match B2StorageService::new().await {
+        Ok(service) => {
+            println!("✅ Backblaze B2 storage initialized");
+            Some(service)
+        }
+        Err(e) => {
+            println!("ℹ️  Backblaze B2 not configured: {}", e);
+            println!("   Set B2_* environment variables to enable image storage");
+            None
+        }
+    };
+
     // --- Optional AI Service for embeddings (requires OPENAI_API_KEY) ---
     let ai_service_result = AIService::new();
     if let Ok(ai_service) = &ai_service_result {
@@ -691,10 +711,23 @@ async fn main() {
         .route("/api/manga/:manga_id/chapters", get(chapters_handler))
         .with_state(cached_mangadex_client);
 
+    // Create B2 storage routes (if enabled)
+    let b2_routes = if let Some(b2) = b2_service {
+        Router::new()
+            .route("/api/b2/upload", post(upload_chapter_to_b2_handler))
+            .route("/api/b2/chapter", get(get_chapter_urls_handler))
+            .route("/api/b2/exists/:manga_id/:chapter_number", get(check_chapter_exists_handler))
+            .route("/api/b2/stats", get(b2_stats_handler))
+            .with_state(b2)
+    } else {
+        Router::new()
+    };
+
     let app = Router::new()
         .route("/", get(root_handler))
         .route("/health", get(health_handler))
         .merge(cached_api_routes)
+        .merge(b2_routes)
         .route("/api/manga/download", get(download_handler))
         .route("/api/manga/download-files", get(download_files_handler))
         .nest_service("/api-doc", ServeDir::new("public"))

@@ -52,7 +52,7 @@ restore.sh
 
 # Cargo build artifacts (will be built in container)
 target
-Cargo.lock
+# Note: Cargo.lock is needed for reproducible builds in Docker
 
 # Temporary files
 tmp
